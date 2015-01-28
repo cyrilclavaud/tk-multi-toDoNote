@@ -5,7 +5,6 @@ import re
 import _strptime
 
 try :
-    #from PySide  import QtCore, QtGui
     from sgtk.platform.qt import QtCore, QtGui
     _signal = QtCore.Signal 
     outFileName = "side"
@@ -65,6 +64,7 @@ class loadingWidget(QtGui.QWidget) :
 class versionWidgetCombo(QtGui.QWidget) :
     @decorateur_try_except
     def __init__(self, parent = None):
+        plog("versionWidgetCombo.__init__\n")
         super(versionWidgetCombo, self).__init__(parent)
         
         self.versionDatas = []
@@ -171,7 +171,7 @@ class versionWidgetCombo(QtGui.QWidget) :
     def play_pathToMovie(self, file):
         
         if self.pathToMovie :
-            convertPath = OS_convertPath( self.pathToMovie )
+            convertPath = self.pathToMovie.replace( "//server01/shared2/"  , "S:\\")
             os.system("start %s"%convertPath )
 
     @decorateur_try_except

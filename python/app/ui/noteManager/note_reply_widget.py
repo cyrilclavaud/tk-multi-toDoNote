@@ -5,7 +5,6 @@ import _strptime
 
 try :
     from sgtk.platform.qt import QtCore, QtGui
-    #from PySide  import QtCore, QtGui
     _signal = QtCore.Signal 
     outFileName = "side"
 
@@ -115,7 +114,7 @@ class noteContentLayout(QtGui.QWidget) :
 
 
         if self.data :
-            for attachementFile in self.data["queriedAttachement"] : # ["C:/temp/redrock.png","C:/temp/greenrock.png"] :
+            for attachementFile in self.data["queriedAttachement"] :
                 labelImage = PicButton(attachementFile["fileOnDisk"], overImageName = "magnifier.png")
 
                 labelImage.SIGNAL_imageClicked.connect( self.showImageDisplay )

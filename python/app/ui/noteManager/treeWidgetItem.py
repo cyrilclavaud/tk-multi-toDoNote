@@ -4,7 +4,6 @@
 import _strptime
 
 try :
-    #from PySide  import QtCore, QtGui
     from sgtk.platform.qt import QtCore, QtGui
     _signal = QtCore.Signal 
     outFileName = "side"
@@ -23,11 +22,9 @@ from utils import *
 
 
 class comboFilterWidget2(QtGui.QWidget):
-    #@decorateur_try_except
+
 
     SIGNAL_currentIndexesChanged = _signal(object)
-
-    
 
     def __init__(self, typeDict , entriesDictList , showLabel = True, multiCheckable = False, parent = None ):
         super(comboFilterWidget2, self).__init__(parent )
@@ -473,18 +470,22 @@ class noteWidget(QtGui.QTreeWidgetItem) :
 
 
     def set_my_bacgroundColor(self ): 
+
+
         backColor = QtGui.QColor(0, 191, 255, 25)
 
         if self.sgData["sg_status_list"] == "opn" : # rouge
-            backColor = QtGui.QColor(255, 0, 0, 45)
+            #backColor = QtGui.QColor(255, 0, 0, 45)
+            backColor = QtGui.QColor(115,195,255, 100)
         elif self.sgData["sg_status_list"] == "ip" : # orange
-            backColor = QtGui.QColor(255, 191, 0, 55)
+            #backColor = QtGui.QColor(255, 191, 0, 55)
+            backColor = QtGui.QColor(223,210,122, 100)
             self.setHidden(True)
 
         elif self.sgData["sg_status_list"] == "clsd" : # vert
-            backColor = QtGui.QColor(0, 255, 0, 45)
-
-       
+            #backColor = QtGui.QColor(0, 255, 0, 45)
+            backColor = QtGui.QColor(95, 95, 95, 100)
+        
         self.setBackground(0, backColor)
         self.setBackground(1, backColor)
         self.setBackground(2, backColor)
@@ -524,7 +525,12 @@ class noteWidget(QtGui.QTreeWidgetItem) :
             other = int(otherItem.text(7))
             return orig < other
         else :
-            return QtGui.QTreeWidgetItem.__lt__(self, otherItem)
+            pprint(str( column))
+            orig  = str(self.text(column)) + self.sgData["sg_status_list"]
+            other = str(otherItem.text(column)) +  otherItem.sgData["sg_status_list"]
+            return orig < other
+
+        return QtGui.QTreeWidgetItem.__lt__(self, otherItem)
 
 
 

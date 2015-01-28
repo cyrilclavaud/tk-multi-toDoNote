@@ -17,20 +17,14 @@ from utils import *
 
 try :
     import sgtk
-    #from PySide  import QtCore, QtGui
     from sgtk.platform.qt import QtCore, QtGui
     _signal = QtCore.Signal 
-    QtCore.QCoreApplication.addLibraryPath("Z:/sharedPython2.6/site-packages_win64/PyQt4/plugins")
+    QtCore.QCoreApplication.addLibraryPath(  getPathToImagePlugins() )
     outFileName = "side"
-
 except :
     from PyQt4 import QtGui, QtCore
-    #QtCore.QCoreApplication.addLibraryPath("Z:/sharedPython2.6/Qt/Qt-4.5.1/plugins")
     _signal = QtCore.pyqtSignal
     outFileName = "cute"
-    print "cuteMode"
-
-
 
 
 import imageDisplay
@@ -53,7 +47,6 @@ from note_reply_widget import *
 
 
 
-
 class myQTree( QtGui.QTreeWidget ):
     pixmap = None
 
@@ -68,7 +61,7 @@ class myQTree( QtGui.QTreeWidget ):
 
     def __init__(self, task_entriesDictList ):
         QtGui.QTreeWidget.__init__(self)
-        
+        self.setFocusPolicy(QtCore.Qt.NoFocus)
         self.task_entriesDictList = task_entriesDictList
 
         self.pixmap = QtGui.QPixmap( getRessources("note_folded.png") )
@@ -151,7 +144,7 @@ class myQTree( QtGui.QTreeWidget ):
 
             if self.isExpanded(index) : 
                 option.displayAlignment    = QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter 
-                painter.fillRect( option.rect, QtGui.QColor(125,125,125, 128) )
+                painter.fillRect( option.rect, QtGui.QColor(115,115,115, 168) )
 
             else :
                 """
@@ -168,12 +161,16 @@ class myQTree( QtGui.QTreeWidget ):
 
 
                 gradient = QtGui.QLinearGradient(option.rect.topLeft(),option.rect.bottomLeft())
-                gradient.setColorAt(0,   QtGui.QColor(125,125,125, 128) )
-                gradient.setColorAt(0.5, QtGui.QColor(185,185,185, 128) )
-                gradient.setColorAt(1,   QtGui.QColor(125,125,125, 128) )
+                gradient.setColorAt(0,   QtGui.QColor(115,115,115, 168) )
+                gradient.setColorAt(0.5, QtGui.QColor(165,165,165, 168) )
+                gradient.setColorAt(1,   QtGui.QColor(115,115,115, 168) )
                 
 
                 painter.fillRect( option.rect, gradient )
+
+                pen = QtGui.QPen(QtGui.QColor("#000000"))
+                painter.setPen(pen)
+                painter.drawLine(option.rect.bottomLeft(),option.rect.bottomRight() )
 
 
             QtGui.QTreeWidget.drawRow(self, painter, option, index )
@@ -185,7 +182,7 @@ class myQTree( QtGui.QTreeWidget ):
             if index.row() % 2 :
                 painter.fillRect( option.rect, QtGui.QColor(0,0,0, 0) )
             else :
-                painter.fillRect( option.rect, QtGui.QColor(0,0,0, 25) )
+                painter.fillRect( option.rect, QtGui.QColor(0,0,0, 80) )
 
 
             QtGui.QTreeWidget.drawRow(self, painter, option, index )
@@ -249,11 +246,30 @@ class Example(QtGui.QWidget):
 
     def __init__(self ):
 
+
         pprint("Example.__init__\n", True)
         perr("",True)
         plog("",True)
 
+
+
         QtGui.QWidget.__init__(self)
+        #self.setWindowFlags(QtCore.Qt.WindowMaximizeButtonHint)
+              
+        """
+        flags = QtCore.Qt.ToolTip
+        
+        flags |= QtCore.Qt.WindowTitleHint
+        flags |= QtCore.Qt.WindowSystemMenuHint   
+        flags |= QtCore.Qt.WindowMinimizeButtonHint
+        flags |= QtCore.Qt.WindowMaximizeButtonHint
+        flags |= QtCore.Qt.WindowCloseButtonHint
+        flags |= QtCore.Qt.WindowContextHelpButtonHint
+        flags |= QtCore.Qt.WindowShadeButtonHint
+        flags |= QtCore.Qt.WindowStaysOnTopHint
+        
+        self.setWindowFlags(flags)
+        """
         self.queue = None
 
         if "USE THREADING" :
@@ -273,7 +289,9 @@ class Example(QtGui.QWidget):
         self._app = None
         try :
             self._app = sgtk.platform.current_bundle()
-            
+
+
+
             projectDict = self._app.context.project
             pprint("Project :" + str( projectDict ) + "\n")
             projectId = projectDict["id"]
@@ -448,7 +466,7 @@ class Example(QtGui.QWidget):
         self.myTree.setColumnCount(11)
         self.myTree.setHeaderLabels(["Shots","Note count"])
         self.myTree.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-
+        self.myTree.setFocusPolicy(QtCore.Qt.NoFocus)
 
 
         self.myTree2 = myQTree( task_entriesDictList )# QtGui.QTreeWidget() 
@@ -730,6 +748,7 @@ class Example(QtGui.QWidget):
             self.queue.task_done()
         self.queue.join()
         """
+
 
         selectedItemList = self.myTree2.selectedItems()
         

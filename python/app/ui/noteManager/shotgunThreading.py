@@ -9,7 +9,6 @@ import urllib
 
 try :
     from sgtk.platform.qt import QtCore, QtGui
-    #from PySide  import QtCore, QtGui
     _signal = QtCore.Signal 
     outFileName = "side"
 
@@ -58,7 +57,7 @@ class sg_query(QtCore.QThread) :
         self.sg_userDict = None
 
         if not app :
-            sys.path.append("Z:/Dev/cyril/python/PACKAGES")
+            sys.path.append(getPathToShotgunApi() )
 
             from shotgun_api3 import Shotgun
             self.sg = Shotgun(self.SERVER_PATH, self.SCRIPT_NAME, self.SCRIPT_KEY)
@@ -66,7 +65,7 @@ class sg_query(QtCore.QThread) :
         else :
             #self.sg = app.engine.tank.shotgun # too slow
             
-            sys.path.append("Z:/Dev/cyril/python/PACKAGES")
+            sys.path.append( getPathToShotgunApi() )
             from shotgun_api3 import Shotgun
             self.sg = Shotgun(self.SERVER_PATH, self.SCRIPT_NAME, self.SCRIPT_KEY)
 
@@ -537,14 +536,14 @@ class sg_query(QtCore.QThread) :
 
         if sg_task or "NoTask" in noteSgData_taskValues_list[1] :
 
-            shotLink =  self.getNote_link(noteSgData_taskValues_list[0]["id"])
+            shotLink =  None# self.getNote_link(noteSgData_taskValues_list[0]["id"])
 
             sg_task_value = []
             if sg_task :
                 sg_task_value = [sg_task]
 
 
-            self.sg.update("Note", noteSgData_taskValues_list[0]["id"], {"tasks" : sg_task_value , "note_links" : [shotLink] } )
+            self.sg.update("Note", noteSgData_taskValues_list[0]["id"], {"tasks" : sg_task_value }) #  , "note_links" : [shotLink] } )
 
             projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
             noteFilter = ['id','is', noteSgData_taskValues_list[0]["id"] ]

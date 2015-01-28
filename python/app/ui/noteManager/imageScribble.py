@@ -1,11 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import utils
+from utils import *
+
 try :
-    #from PySide  import QtCore, QtGui
     from sgtk.platform.qt import QtCore, QtGui
     _signal = QtCore.Signal 
-    QtCore.QCoreApplication.addLibraryPath( 'C:/Python27/Lib/site-packages/PyQt4/plugins/' )
+    QtCore.QCoreApplication.addLibraryPath( getPathToImagePlugins() )
 
 except :
     from PyQt4 import QtGui, QtCore
@@ -13,15 +15,13 @@ except :
 
 
 
-import utils
-from utils import *
 
 
 class ScribbleArea(QtGui.QWidget):
 
 
     def __init__(self, parent=None):
-        plog("ScribbleArea .__init__\n")
+        #plog("ScribbleArea .__init__\n")
         super(ScribbleArea, self).__init__(parent)
 
         self.setAttribute(QtCore.Qt.WA_StaticContents)

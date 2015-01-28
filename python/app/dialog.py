@@ -19,6 +19,9 @@ from sgtk.platform.qt import QtCore, QtGui
 from .ui.dialog import Ui_Dialog
 
 from .ui import noteManager
+
+
+
 def show_dialog(app_instance):
     """
     Shows the main dialog window.
@@ -29,42 +32,24 @@ def show_dialog(app_instance):
     
     # we pass the dialog class to this method and leave the actual construction
     # to be carried out by toolkit.
+
     AppDialog = noteManager.noteManager.Example
-    app_instance.engine.show_dialog("Starter Template App...", app_instance, AppDialog)
+
+
     
+    app_instance.engine.show_dialog("To-Do Note App", app_instance, AppDialog )    
 
+    dialog = QtGui.QApplication.activeWindow()
+    flags = QtCore.Qt.Window
 
-"""
-
-class AppDialog( noteManager.noteManager.Example ) : # QtGui.QWidget):
+    flags |= QtCore.Qt.WindowTitleHint
+    flags |= QtCore.Qt.WindowSystemMenuHint   
+    flags |= QtCore.Qt.WindowMinimizeButtonHint
+    flags |= QtCore.Qt.WindowMaximizeButtonHint
+    flags |= QtCore.Qt.WindowCloseButtonHint
+    flags |= QtCore.Qt.WindowContextHelpButtonHint
+    flags |= QtCore.Qt.WindowShadeButtonHint
+    flags |= QtCore.Qt.WindowStaysOnTopHint
     
-
-    def __init__(self):
-        super(AppDialog, self).__init__()
-
-
-
-
-        # first, call the base class and let it do its thing.
-
-        QtGui.QWidget.__init__(self)
-        
-        # now load in the UI that was created in the UI designer
-        self.ui = Ui_Dialog() 
-        self.ui.setupUi(self)
-        
-        # most of the useful accessors are available through the Application class instance
-        # it is often handy to keep a reference to this. You can get it via the following method:
-        self._app = sgtk.platform.current_bundle()
-        
-        # via the self._app handle we can for example access:
-        # - The engine, via self._app.engine
-        # - A Shotgun API instance, via self._app.shotgun
-        # - A tk API instance, via self._app.tk 
-        
-        # lastly, set up our very basic UI
-
-        self.ui.context.setText("Current Context: %s" % self._app.context.entity)
-        
-
-"""
+    dialog.setWindowFlags(flags) 
+    dialog.show()
