@@ -52,18 +52,31 @@ class comboFilterWidget2(QtGui.QWidget):
 
         self.widget.setMinimumWidth(120)
 
+      
+        checkCount = 0
+        if not self.multiCheckable :
+            
+            for entryDict in entriesDictList :
+                if entryDict.has_key("checked") :
+                    if entryDict["checked"] == True :
+                        checkCount+= 1
+
 
 
         idx = 0
         for entryDict in entriesDictList :
             if not self.multiCheckable :
-                if not entryDict.has_key("checked")  :
+
+
+                if not entryDict.has_key("checked") or not checkCount :
                     entryDict["checked"] = True
+                
                 if entryDict["checked"] :
                     if entryDict["icon"] :
                         self.widget.addItem( QtGui.QIcon(getRessources( entryDict["icon"] ) ), entryDict["text"]  )
                     else :
                         self.widget.addItem(  entryDict["text"]   )
+                
                 if self.widget.count == 1 :
                     self.widget.setEnabled(False)
 
@@ -239,14 +252,14 @@ class comboFilterWidget2(QtGui.QWidget):
         else :
             return self.entriesDictList[self.widget.currentIndex()]["values"]
     
-    #@decorateur_try_except
+    @decorateur_try_except
     def retrieveIconFromValue(self, value ) :
         for entriesDict  in  self.entriesDictList :
             if value in entriesDict["values"] :
                 return  entriesDict["icon"]
         return value
     
-    #@decorateur_try_except
+
     def retrieveIndiceFromValue(self, value) :
         idx = 0 
         for entriesDict  in  self.entriesDictList :
@@ -255,13 +268,17 @@ class comboFilterWidget2(QtGui.QWidget):
             idx  += 1
         return 0
 
+    @decorateur_try_except
     def retrieveValueFromName(self, name):
         for entriesDict  in  self.entriesDictList :
             if name in entriesDict["values"] :
                 return  entriesDict["values"]
         return name
 
-    #@decorateur_try_except
+
+
+
+    @decorateur_try_except
     def retrieveNameFromValue(self, value) :
         #return value
 
@@ -270,38 +287,29 @@ class comboFilterWidget2(QtGui.QWidget):
                 return  entriesDict["text"]
         return value
     
-    #@decorateur_try_except
+    @decorateur_try_except
     def retrieveDictFromSelection(self):
 
         return self.retrieveValueFromName(self.widget.currentText())
     
-    #@decorateur_try_except
+    @decorateur_try_except
     def retrieveDict(self):
         return self.typeDict, self.entriesDictList[1:]
 
 
-    #@decorateur_try_except
+    @decorateur_try_except
     def setFromValue(self, name ) :
         idx = 0
         idx = self.widget.findText(name)
         self.widget.setCurrentIndex(idx)
-        return
-        for entriesDict  in  self.entriesDictList :
-            if name in entriesDict["values"] :
-
-
-                self.widget.setCurrentIndex(idx)
-                break
-
-
-            idx += 1 
-            
-    #@decorateur_try_except
+        
+    @decorateur_try_except
     def setMyCurrentIndex(self, index ):
 
 
         self.widget.setCurrentIndex(0) 
         self.widget.setEnabled(True)
+
 
 
 
@@ -332,7 +340,7 @@ class comboFilterWidget2(QtGui.QWidget):
         
         return indexesList
 
-
+    @decorateur_try_except
     def sendCheckedIndexes(self, index):
 
         self.SIGNAL_currentIndexesChanged.emit( self.getCheckedIndexes() )
@@ -345,9 +353,22 @@ class comboFilterWidget2(QtGui.QWidget):
         else :
             return checkedIndexes[0]
 
+    @decorateur_try_except
+    def getMyValuesFromIndexes(self, indexList) :
+        idx = 1
+        valueLists = []
+        for entryDict in self.entriesDictList :
+            if idx in  indexList :
+                valueLists.append(entryDict["values"])
+            else :
+                valueLists.append(None)
+            idx+=1
+        return valueLists
+
+    @decorateur_try_except
     def setMyCurrentFromIndexes(self, indexList ):
 
-         
+        self.widget.blockSignals(True)
         self.widget.clear()
 
         idx = 1
@@ -359,18 +380,23 @@ class comboFilterWidget2(QtGui.QWidget):
                     self.widget.addItem(  entryDict["text"]   )
             idx+=1
 
-        self.widget.setCurrentIndex(self.widget.count()-1)
+        self.widget.blockSignals(False)
+
+
+        self.widget.currentIndexChanged.emit(0)
+        
         if self.widget.count()==1:
             self.widget.setEnabled(False)
         else :
             self.widget.setEnabled(True)
+        
 
 
 class lineEditFilterWidget(QtGui.QWidget) :
 
     #@decorateur_try_except
     def __init__(self, typeDict , parent = None ):
-        plog("lineEditFilterWidget.__init__\n")
+
         super(lineEditFilterWidget, self).__init__(parent )
 
         layout = QtGui.QHBoxLayout()
@@ -401,7 +427,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
 
     #@decorateur_try_except
     def __init__(self, parent, sgData, filterWidget, typeFilterWidget,  userNameFilterWidget, contentFilterWidget, entityAssignedFilterWidget  ):
-        plog("noteWidget.__init__\n")
+
         super(noteWidget, self).__init__(parent )
 
 
@@ -466,7 +492,14 @@ class noteWidget(QtGui.QTreeWidgetItem) :
                     print "no change"
 
 
-                
+    
+    def setTextColor(self, color, bold = False):
+        font = QtGui.QFont("" , 9 , QtGui.QFont.Bold )
+        b = QtGui.QBrush(color)
+        self.setForeground( 5 , b );
+        
+        if bold :
+            self.setFont( 5, font );
 
 
     def set_my_bacgroundColor(self ): 
@@ -486,6 +519,12 @@ class noteWidget(QtGui.QTreeWidgetItem) :
             #backColor = QtGui.QColor(0, 255, 0, 45)
             backColor = QtGui.QColor(95, 95, 95, 100)
         
+        if str(self.text(11)) == "False" :
+            self.setTextColor(QtGui.QColor(250,250,210), bold = True)
+        else :
+            self.setTextColor(QtGui.QColor(210,210,210))
+
+
         self.setBackground(0, backColor)
         self.setBackground(1, backColor)
         self.setBackground(2, backColor)
@@ -502,7 +541,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         self.set_my_bacgroundColor()
         self.do_hidding()
 
-    #@decorateur_try_except
+    @decorateur_try_except
     def __lt__(self, otherItem):
         column = self.treeWidget().sortColumn()
 
@@ -520,12 +559,15 @@ class noteWidget(QtGui.QTreeWidgetItem) :
             orig  = str(self.sgData["created_at"])
             other = str(otherItem.sgData["created_at"])
             return orig < other
+        elif column == 5 :
+            orig  = str(self.text(11))  + str(self.text(column)) 
+            other = str(otherItem.text(11))  + str(otherItem.text(column)) 
+            return orig < other
         elif column == 7 :
             orig  = int(self.text(7))
             other = int(otherItem.text(7))
             return orig < other
         else :
-            pprint(str( column))
             orig  = str(self.text(column)) + self.sgData["sg_status_list"]
             other = str(otherItem.text(column)) +  otherItem.sgData["sg_status_list"]
             return orig < other
@@ -639,7 +681,7 @@ class groupNoteWidget(QtGui.QTreeWidgetItem) :
 class typeNoteWidget(QtGui.QTreeWidgetItem) :
     #@decorateur_try_except
     def __init__(self, parent, sgData, filterWidget, group ):
-        plog("typeNoteWidget.__init__\n")
+
         super(typeNoteWidget, self).__init__(parent )
 
 
@@ -730,7 +772,7 @@ class taskWidget(QtGui.QTreeWidgetItem) :
 
     #@decorateur_try_except
     def __init__(self, parent, sgData, filterWidget ):
-        plog("taskWidget.__init__\n") 
+
 
         super(taskWidget, self).__init__(parent )
 

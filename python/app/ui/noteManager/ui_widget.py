@@ -32,7 +32,6 @@ class toggleBtn(QtGui.QPushButton) :
 class loadingWidget(QtGui.QWidget) :
     @decorateur_try_except
     def __init__(self, parent = None):
-        plog("loadingWidget.__init__\n")
         QtGui.QWidget.__init__(self, parent)
          
         # Load the file into a QMovie
@@ -64,7 +63,6 @@ class loadingWidget(QtGui.QWidget) :
 class versionWidgetCombo(QtGui.QWidget) :
     @decorateur_try_except
     def __init__(self, parent = None):
-        plog("versionWidgetCombo.__init__\n")
         super(versionWidgetCombo, self).__init__(parent)
         
         self.versionDatas = []
@@ -86,10 +84,7 @@ class versionWidgetCombo(QtGui.QWidget) :
         self.masterLayout.addLayout(self.layout)
 
 
-        #pic = PicButton( getRessources( "preloader.gif"),200,200, overImageName = "play.png")
-        #pic.setMaximumWidth(200)
-        #pic.SIGNAL_imageClicked.connect(self.play_pathToMovie)
-        self.pic= loadingWidget() # PicButton( getRessources( "preloader.gif"),200,200, overImageName = "play.png") #loadingWidget()
+        self.pic= loadingWidget() 
         self.pic.setMaximumWidth(50)
 
         
@@ -171,7 +166,7 @@ class versionWidgetCombo(QtGui.QWidget) :
     def play_pathToMovie(self, file):
         
         if self.pathToMovie :
-            convertPath = self.pathToMovie.replace( "//server01/shared2/"  , "S:\\")
+            convertPath =   OS_convertPath( self.pathToMovie )
             os.system("start %s"%convertPath )
 
     @decorateur_try_except
@@ -188,10 +183,7 @@ class versionWidgetCombo(QtGui.QWidget) :
 
 
         self.pic.setParent(None)
-        """
-        self.pic = PicButton( getRessources( "version.png"),200,200, overImageName = "empty.png")
-        self.pic.setMaximumWidth(200)
-        """
+
 
         self.versionQtCombo.blockSignals(True)
         self.versionQtCombo.clear()
@@ -238,25 +230,29 @@ class versionWidget(QtGui.QWidget) :
 
     @decorateur_try_except
     def __init__(self, versionData, parent=None):
-        plog("versionWidget.__init__\n")
         super(versionWidget, self).__init__(parent)
         self.pathToMovie = versionData["sg_path_to_movie"]
-       
+        
+        testLayout = QtGui.QVBoxLayout() 
+        testLayout.setContentsMargins(0,0,0,0)
         layout = QtGui.QHBoxLayout()
         layout.setContentsMargins(0,0,0,0)
+        testLayout.addLayout(layout) 
+        self.setLayout(testLayout)
 
-        self.setLayout(layout)
 
-
-        pic =   PicButton(versionData["downloadedImage"],200,200, overImageName = "play.png")
+        pic =   PicButton(versionData["downloadedImage"],200,200, overImageName = "play.png",  doStart=True)
         pic.setMaximumWidth(200)
         pic.SIGNAL_imageClicked.connect(self.play_pathToMovie)
 
+
+        if versionData.has_key("Title") :
+            titleLabel = QtGui.QLabel(versionData["Title"] )
+            titleLabel.setAlignment(QtCore.Qt.AlignCenter)
+            testLayout.addWidget(titleLabel)
         layout.addWidget(pic)
 
-        infoLayout = QtGui.QVBoxLayout()
-        infoLayout.setAlignment(QtCore.Qt.AlignTop)
-        layout.addLayout( infoLayout)
+
 
 
         versionDataName = versionData["user"]
@@ -270,22 +266,22 @@ class versionWidget(QtGui.QWidget) :
         splits = re.findall(r' v\d+', versionData["code"] )
         if splits :
             versionString = splits[-1]
-        
-        infoLayout.addWidget(QtGui.QLabel("name : %s"%versionData["code"].replace(versionString, "<b>%s</b>"%versionString) ) )    
-        infoLayout.addWidget(QtGui.QLabel("%s : <b>%s</b"%("user"  ,  versionDataName ) ) ) 
-        infoLayout.addWidget(QtGui.QLabel("%s : <b>%s</b"%("created", versionData["created_at"]) ) )   
+
+        txt = versionString +"\n"
+        txt+= "name : %s\n"%versionData["code"]
+        txt+= "%s : %s\n"%("user"  ,  versionDataName )
+        txt+= "%s : %s\n"%("created", versionData["created_at"])
+        txt+= "%s : %s\n"%("task", versionData["sg_task"]["name"])
+        self.setToolTip(txt)
+
+        return
 
 
-        #infoLayout.addStretch()
-        infoLayout.setContentsMargins(0,0,0,0)
-        infoLayout.setSpacing(0)
-
-        layout.addSpacing(5)
 
     @decorateur_try_except
     def play_pathToMovie(self, file):
         
-        convertPath = self.pathToMovie.replace( "//server01/shared2/"  , "S:\\")
+        convertPath =   OS_convertPath( self.pathToMovie )
         os.system("start %s"%convertPath )
 
 
@@ -294,13 +290,14 @@ class PicButton(QtGui.QLabel):
 
     @decorateur_try_except
     def __init__(self, imageFileName, x = 100, y = 100 , overImageName = "pencil.png" , doStart=False ,parent=None):
-        plog("PicButton.__init__\n")
         super(PicButton, self).__init__(parent)
         self.do_on_hover  = True 
         self.isNullPixmap = True 
         if overImageName == None :
             self.do_on_hover = False
 
+        if not overImageName :
+            overImageName = "empty.png"
         self.overImagePath = getRessources(overImageName)
         self.resultPix = None
         self.x = x 
@@ -329,9 +326,6 @@ class PicButton(QtGui.QLabel):
                 self.createOverlayPixmap()
                 style = " QLabel {  border: 2px solid gray;   border-radius: 4px;   padding: 2px;  } "
                 self.setStyleSheet(style)
-
-
-
 
 
 
@@ -371,13 +365,13 @@ class PicButton(QtGui.QLabel):
         painter.drawPixmap(px, py, overPix)
         del painter
 
-    @decorateur_try_except
+
     def enterEvent(self, event):
         if self.do_on_hover :
             if self.resultPix :
                 self.setPixmap(self.resultPix)
 
-    @decorateur_try_except    
+  
     def leaveEvent(self, event):
         if self.do_on_hover :
             self.setPixmap(self.attachmentPixmap)

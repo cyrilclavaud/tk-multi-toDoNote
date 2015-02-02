@@ -35,7 +35,6 @@ class noteContentLayout(QtGui.QWidget) :
 
     @decorateur_try_except
     def __init__(self, dataType , data , noteData = None, parent= None) :
-        plog("noteContentLayout.__init__\n")
         super(noteContentLayout, self).__init__(parent ) 
         self.data = data
         self.noteData = noteData # is a list
@@ -186,7 +185,7 @@ class noteContentLayout(QtGui.QWidget) :
     
 
     def addAttachment(self) :
-        plog("addAttachment")
+
         attacheFile = QtGui.QFileDialog.getOpenFileName()
         if isinstance(attacheFile, tuple) : # pySide 
             attacheFile = attacheFile[0]
@@ -206,7 +205,7 @@ class noteContentLayout(QtGui.QWidget) :
 
 
     def addScreenShot(self) :
-        plog("addScreenShot")
+
 
         attacheFile = imagePicker.take_a_screenShot()
         if os.path.isfile(attacheFile) :
@@ -225,7 +224,7 @@ class noteContentLayout(QtGui.QWidget) :
 
 
     def createNoteSlot(self) :
-        plog("create Note !!\n")
+
 
         noteContent = ""
         fieldContent = self.Qt_noteContent.toPlainText()
@@ -250,7 +249,6 @@ class noteContentLayout(QtGui.QWidget) :
 
 
     def replyNoteSlot(self):
-        plog("create reply !!\n")
 
         replyContent = ""
         fieldContent = self.Qt_noteContent.toPlainText()
@@ -323,7 +321,7 @@ class noteLayoutWidget(QtGui.QWidget) :
 
     @decorateur_try_except
     def __init__(self, data, comboFilterWidgetList = None, threadQueue = None, parent= None) : 
-        plog("noteLayoutWidget.__init__\n")
+
         super(noteLayoutWidget, self).__init__(parent ) 
         self.taskFilterWidget = None
         self.shotWidgetItemList = None
@@ -387,6 +385,7 @@ class noteLayoutWidget(QtGui.QWidget) :
 
             idx +=1
             self.taskFilterWidget = comboFilterWidget2( *comboFilterWidgetList[1].retrieveDict(), showLabel = False )
+
             self.taskFilterWidget.widget.currentIndexChanged.connect(  self.getVersion)
             comboFilterWidgetList[1].SIGNAL_currentIndexesChanged.connect(self.taskFilterWidget.setMyCurrentFromIndexes)
 
@@ -396,7 +395,6 @@ class noteLayoutWidget(QtGui.QWidget) :
 
             idx +=1
             self.typeFilterWidget = comboFilterWidget2(*comboFilterWidgetList[2].retrieveDict(),showLabel = False )
-            #self.typeFilterWidget.setMyCurrentIndex(comboFilterWidgetList[2].widget.currentIndex())
             comboFilterWidgetList[2].SIGNAL_currentIndexesChanged.connect(self.typeFilterWidget.setMyCurrentFromIndexes)
             titleGridLayout.addWidget(QtGui.QLabel("Type"), idx,0)
             titleGridLayout.addWidget(self.typeFilterWidget, idx,1)
@@ -404,7 +402,6 @@ class noteLayoutWidget(QtGui.QWidget) :
 
             idx +=1
             self.statusFilterWidget = comboFilterWidget2(*comboFilterWidgetList[3].retrieveDict(),showLabel = False )
-            #self.statusFilterWidget.setMyCurrentIndex(comboFilterWidgetList[3].widget.currentIndex())
             comboFilterWidgetList[3].SIGNAL_currentIndexesChanged.connect(self.statusFilterWidget.setMyCurrentFromIndexes)
             titleGridLayout.addWidget(QtGui.QLabel("Status"), idx,0)
             titleGridLayout.addWidget(self.statusFilterWidget , idx,1)
@@ -425,7 +422,8 @@ class noteLayoutWidget(QtGui.QWidget) :
             layout.addWidget(line)
 
             if  comboFilterWidgetList[0]:
-                self.getVersion(0)
+                pprint ("what")
+                #self.getVersion(0)
 
         else :
             selectLabel = QtGui.QLabel("Select a Shot")
@@ -447,9 +445,16 @@ class noteLayoutWidget(QtGui.QWidget) :
                         if linksDict["type"] == "Version" :
                             noteLinkVersion.append( linksDict )
 
-
-                for versionDict in noteLinkVersion :
-                    layout.addWidget(versionWidget(versionDict) )
+                if noteLinkVersion :
+                    versionLayout = QtGui.QHBoxLayout()
+                    versionLayout.setContentsMargins(0,0,0,0)
+                    layout.addLayout(versionLayout )
+                    for versionDict in noteLinkVersion :
+                        versionLayout.addWidget(versionWidget(versionDict) )
+                    if len(noteLinkVersion) == 2 :
+                        labelArrow =  QtGui.QLabel()
+                        labelArrow.setPixmap(QtGui.QPixmap(getRessources("versionArrow.png" ) ) )
+                        versionLayout.insertWidget(1, labelArrow )
 
 
                 if noteLinkVersion :
@@ -490,16 +495,21 @@ class noteLayoutWidget(QtGui.QWidget) :
                 myform = QtGui.QVBoxLayout()
 
                 myReplyBox = QtGui.QGroupBox('Replies')
-                myReplyBox.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
+                
 
                 style = " QGroupBox  { background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 255, 255, 0%), stop: 1 rgba(0, 0, 0, 33%) ); border: 2px solid gray; border-radius: 5px; margin-top: 1ex; }"
                 style += " QGroupBox::title{ subcontrol-origin: margin; subcontrol-position: top center; padding: 0 3px; } "
+                myReplyBox.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
                 myReplyBox.setStyleSheet(style)
                 myReplyBox.setLayout(myform)
                 
                 scroll = QtGui.QScrollArea()
                 scroll.setWidget(myReplyBox)
                 scroll.setWidgetResizable(True)
+
+
+                style = "QScrollArea {border-style: none}"
+                scroll.setStyleSheet(style)
                 #scroll.setFixedHeight(400)            
 
                 myEmptyNewReply = noteContentLayout("Reply", None,    self.data    , None)
@@ -539,11 +549,11 @@ class noteLayoutWidget(QtGui.QWidget) :
                 scroll = QtGui.QScrollArea()
                 scroll.setWidget(myReplyBox)
                 scroll.setWidgetResizable(True)
-                #scroll.setFixedHeight(400)            
+                style = "QScrollArea {border-style: none}"
+                scroll.setStyleSheet(style)
+          
 
-                # { "type":"Note", "id":self.data[0]["id"], "replies":self.data[0]["replies"], "sg_status_list": self.data[0]["sg_status_list"] }
                 myEmptyNewReply = noteContentLayout("Reply", None,  self.data   , None)
-                #myEmptyNewReply.SIGNAL_createReply.connect( self.replyNoteSlot )
                 myEmptyNewReply.SIGNAL_createMultiReply.connect( self.multiReplyNoteSlot )
 
                 myform.addWidget( myEmptyNewReply )
@@ -555,6 +565,13 @@ class noteLayoutWidget(QtGui.QWidget) :
                 myform.addWidget(line)
                 
                 layout.addWidget(scroll)
+
+
+    def setComboTasks(self, indexList ) :
+        
+        self.taskFilterWidget.setMyCurrentFromIndexes( indexList )
+        #self.queue
+
 
     @decorateur_try_except    
     def todo(self, obj) :
@@ -608,18 +625,20 @@ class noteLayoutWidget(QtGui.QWidget) :
     def updateTaskFilterWidget(self, taskListName ):
         if self.taskFilterWidget : 
             if taskListName :
+                self.taskFilterWidget.widget.blockSignals(True)
                 self.taskFilterWidget.setFromValue(taskListName[0])
-                
+                self.taskFilterWidget.widget.blockSignals(False)
+            self.getVersion(0)
 
 
     @decorateur_try_except
     def replyNoteSlot(self, obj) :
-        pprint("forwardng datas\n")
+
         self.SIGNAL_createReply.emit(obj)
                 
     @decorateur_try_except
     def multiReplyNoteSlot(self, obj) :
-        pprint("forwardng multi datas\n")
+
         self.SIGNAL_createMultiReply.emit(obj)
 
 
@@ -627,14 +646,22 @@ class noteLayoutWidget(QtGui.QWidget) :
     @decorateur_try_except
     def getVersion(self, idx):
 
+
+        pprint("\n1 " + str(self.taskFilterWidget.widget.currentText()) + "  ")
+
         shotIdx = self.shotComboBox.currentIndex()
         if self.my_versionWidgetCombo :
             self.my_versionWidgetCombo.setOnLoading()
 
 
 
+        self.queue.put([-5, u"getExecutable",   [self.shotWidgetItemList[shotIdx]["id"], self.taskFilterWidget.retrieveDictFromSelection(), str(self.taskFilterWidget.widget.currentText())  ] , None ] ) 
         self.queue.put([0, u"getVersion",  [self.shotWidgetItemList[shotIdx]["id"], self.taskFilterWidget.retrieveDictFromSelection(), [self.shotComboBox.currentText(), self.taskFilterWidget.widget.currentText() ] ] , None ] )
-        ## self.queue.join() ##
+
+
+
+
+
     @decorateur_try_except
     def fill_versionWidgetCombo(self, obj) :
 

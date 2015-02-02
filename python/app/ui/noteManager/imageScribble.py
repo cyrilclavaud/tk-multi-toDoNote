@@ -21,7 +21,6 @@ class ScribbleArea(QtGui.QWidget):
 
 
     def __init__(self, parent=None):
-        #plog("ScribbleArea .__init__\n")
         super(ScribbleArea, self).__init__(parent)
 
         self.setAttribute(QtCore.Qt.WA_StaticContents)
@@ -49,16 +48,16 @@ class ScribbleArea(QtGui.QWidget):
 
         if not self.image.format() == QtGui.QImage.Format_RGB32 :
             self.image = self.image.convertToFormat( QtGui.QImage.Format_RGB32 )
-            print "converting "
+            #print "converting "
 
         imWidth  = self.image.width()
         imHeight = self.image.height()
         print imWidth, imHeight
         if imHeight  > 1080 :
             ratio = float(imHeight)/1080.0
-            print ratio
+            #print ratio
             self.resizeImage(self.image, QtCore.QSize(  imWidth/ratio, 1080 ) )
-            print imWidth/ratio, 1080
+            #print imWidth/ratio, 1080
 
 
         w = self.image.width()

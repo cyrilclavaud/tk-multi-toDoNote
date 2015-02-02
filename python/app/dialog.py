@@ -49,7 +49,8 @@ def show_dialog(app_instance):
     flags |= QtCore.Qt.WindowCloseButtonHint
     flags |= QtCore.Qt.WindowContextHelpButtonHint
     flags |= QtCore.Qt.WindowShadeButtonHint
-    flags |= QtCore.Qt.WindowStaysOnTopHint
+    
+    #flags |= QtCore.Qt.WindowStaysOnTopHint
     
     dialog.setWindowFlags(flags) 
     dialog.show()

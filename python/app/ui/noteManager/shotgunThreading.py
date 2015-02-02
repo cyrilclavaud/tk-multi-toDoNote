@@ -6,7 +6,7 @@ import os
 import sys
 import re
 import urllib
-
+import copy
 try :
     from sgtk.platform.qt import QtCore, QtGui
     _signal = QtCore.Signal 
@@ -29,6 +29,7 @@ from utils import *
 ############### THREADING CLASS ################# 
 
 class sg_query(QtCore.QThread) :
+
     queue = None
 
     SERVER_PATH = "https://nozon.shotgunstudio.com"
@@ -47,31 +48,39 @@ class sg_query(QtCore.QThread) :
     SIGNAL_addNote = _signal(object)
     SIGNAL_refreshNote = _signal(object)
 
+    SIGNAL_updateLaunchAppWidget = _signal(object)
+
+    SIGNAL_pbar = _signal(int)
+
     th_id = 0
     @decorateur_try_except
     def __init__(self, app ):
-        plog("sg_query.__init__\n")
+
         super(sg_query, self).__init__()
 
 
         self.sg_userDict = None
 
         if not app :
-            sys.path.append(getPathToShotgunApi() )
+            sys.path.append( getPathToShotgunApi() )
 
             from shotgun_api3 import Shotgun
             self.sg = Shotgun(self.SERVER_PATH, self.SCRIPT_NAME, self.SCRIPT_KEY)
         
         else :
             #self.sg = app.engine.tank.shotgun # too slow
-            
-            sys.path.append( getPathToShotgunApi() )
-            from shotgun_api3 import Shotgun
-            self.sg = Shotgun(self.SERVER_PATH, self.SCRIPT_NAME, self.SCRIPT_KEY)
+            path_to_shotgunApi = getPathToShotgunApi()
+            if path_to_shotgunApi :
+                sys.path.append( path_to_shotgunApi )
+                from shotgun_api3 import Shotgun
+                self.sg = Shotgun(self.SERVER_PATH, self.SCRIPT_NAME, self.SCRIPT_KEY)
+            else :
+                self.sg = app.engine.tank.shotgun # too slow
 
             self.sg_userDict = app.context.user
-            pprint( "Thread User :" + str(self.sg_userDict))
+            
 
+        self.appLauncherDict = None
         self.project = None
         self.tempPath = None       
         self.tempPathAttachement = None
@@ -79,8 +88,8 @@ class sg_query(QtCore.QThread) :
 
 
         # set default project id 
-
-
+    def setAppLauncher(self, appLauncherDict ) :
+        self.appLauncherDict = appLauncherDict
 
     def setProjectId(self, projectId = 191 ):
         self.project = projectId
@@ -152,6 +161,13 @@ class sg_query(QtCore.QThread) :
         elif stringCommandSwitch == u"setNoteTask" :
             self.setNoteTask(threadCommandArgs, threadCommandCallBack)
 
+        elif stringCommandSwitch == u"getExecutable" :
+            pass
+            #self.getExecutable(threadCommandArgs, threadCommandCallBack)
+
+        elif stringCommandSwitch == u"linkToLastVersion" :
+            self.linkToLastVersion(threadCommandArgs, threadCommandCallBack )
+
 
 
     def queryTaskAssigned(self, shotSgData_taskList_noteId, callBack = None ) :
@@ -159,8 +175,6 @@ class sg_query(QtCore.QThread) :
         projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
         taskFilter =   [ 'content','in', shotSgData_taskList_noteId[1] ]
         entityFilter = ['entity', 'is',  { 'type': shotSgData_taskList_noteId[0]['type'] , 'id':shotSgData_taskList_noteId[0]['id']}   ]
-        perr(str( taskFilter )+"\n")
-        perr(str( entityFilter )+"\n\n")
         assigneesNameList = []
         result = self.sg.find_one("Task", [projectFilter,taskFilter,entityFilter ], ["task_assignees"] )
         if result :
@@ -184,7 +198,7 @@ class sg_query(QtCore.QThread) :
 
     @decorateur_try_except
     def queryAllShot(self, args = None,  callback = None): 
-        pprint("#     query All Shot\n")
+
         projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
         
         shotList = self.sg.find("Shot", [projectFilter], [u"code", u"image", u"sg_sequence" ])
@@ -193,24 +207,24 @@ class sg_query(QtCore.QThread) :
     
     @decorateur_try_except
     def downloadThumbnail(self, args = None, callback = None) :
-        pprint("#     Get Thumbnail\n")
+
         i = 0
         for entityDict in args :
             thumbNameFile = os.path.join( self.tempPath, u"thumbnail_%s_%i.jpg"%( entityDict['type'] , entityDict['id'] ) )
             if entityDict['image'] :
                 if not os.path.isfile(thumbNameFile ):
                     urllib.urlretrieve(entityDict['image'], thumbNameFile)
-                    pprint("#         Downloading\n")
+
 
                 self.SIGNAL_setThumbnail.emit( [  "shotAsset_%i"%entityDict["id"], thumbNameFile ] )
 
     @decorateur_try_except
     def downloadVersionThumbnail(self, entityDict) :
-        pprint("#     get version thumbnail\n")
+
         thumbNameFile = os.path.join( self.tempPath, u"Version_thumbnail_%s_%i.jpg"%( entityDict['type'] , entityDict['id'] ) )   
         if entityDict['image'] :
             if not os.path.isfile(thumbNameFile ):
-                pprint("#         Downloading\n")
+
                 urllib.urlretrieve(entityDict['image'], thumbNameFile)
         return thumbNameFile
 
@@ -225,12 +239,11 @@ class sg_query(QtCore.QThread) :
 
 
         self.SIGNAL_setNoteList.emit(  [ [ "shotAsset_%i"%args["id"] , args['code'], args['id']]  ,noteList, parentWidget ] )
-        pprint("#     queryNotes END \n")
+
 
     @decorateur_try_except
     def queryNoteContent(self, args = None, args2 = None) :
 
-        pprint( "#     queryNoteContent \n")
 
         projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
         idNoteList = []
@@ -243,6 +256,12 @@ class sg_query(QtCore.QThread) :
             sg_notecontent_tempList = self.sg.find("Note", [ projectFilter, noteFilter ] , ["attachments", "subject", "content", "user", "created_at", "updated_at", "sg_status_list", "replies", "note_links"] )
             
             for sgNote in sg_notecontent_tempList :
+
+                taskValuesList = [] 
+                for noteDict in args :
+                    if  noteDict["id"] == sgNote["id"]:
+                        taskValuesList = noteDict["taskValues"]
+
 
                 eventNoteList = []
 
@@ -271,16 +290,44 @@ class sg_query(QtCore.QThread) :
 
 
                 versionLinkList = []
+
+                shotId = None
+                versionIdList = []
                 for noteLink in sgNote["note_links"] : 
                     if noteLink["type"] == "Version" :
-                        versionDict = self.sg.find_one( "Version", [ projectFilter, ['id','is', noteLink['id'] ] ] , ["user", "created_at", "image", "sg_path_to_movie", "code"] )
+                        versionDict = self.sg.find_one( "Version", [ projectFilter, ['id','is', noteLink['id'] ] ] , ["sg_task","user", "created_at", "image", "sg_path_to_movie", "code"] )
                         versionDict["downloadedImage"] = self.downloadVersionThumbnail(versionDict)
+                        versionDict["Title"] = "Version linked to the note"
                         versionLinkList.append( versionDict  )
+                        versionIdList.append(versionDict['id'])
+                    elif noteLink["type"] == "Shot" :
+                        shotId = noteLink["id"]
+
+
+
                 
+                if shotId :
+                    shotFilter    = ['entity','is', {'type': 'Shot', 'id':shotId } ]
+                    taskFilter = []
+                    for taskName in taskValuesList:
+                        taskFilter.append( ['sg_task', 'name_contains', taskName  ] )
+                    #shotObj[1]
+                    Complex_TaskFilter    ={
+                        "filter_operator": "any",
+                        "filters": taskFilter
+                        }
+
+                    orderList = [{'field_name':'id','direction':'desc'}]
+                    lastVersionDictList = self.sg.find("Version", [projectFilter, shotFilter, Complex_TaskFilter ], fields = ["sg_task","user", "created_at", "image", "sg_path_to_movie", "code"] , limit = 1, order = orderList  )
+                    if lastVersionDictList :
+                        versionDict = lastVersionDictList[-1]
+                        if not versionDict["id"] in versionIdList :            
+                            versionDict["downloadedImage"] = self.downloadVersionThumbnail(versionDict)
+                            versionDict["Title"] = "Last version"
+                            versionLinkList.append(versionDict)             
+
                 sgNote["note_links"] = versionLinkList
                 
-
-
                 sg_notecontent_List.append(sgNote)
       
 
@@ -289,18 +336,40 @@ class sg_query(QtCore.QThread) :
 
     @decorateur_try_except
     def queryNoteVersion(self, threadCommandArgs, threadCommandCallBack) :
-        pprint( "#     Query Version and Replies number\n")
 
         projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
-        idNoteFilter = ['id','is', threadCommandArgs ]
+
+        shotId = threadCommandArgs[0]
+        taskValuesList = threadCommandArgs[1]
+        noteId = threadCommandArgs[2]
+
+
+        shotFilter    = ['entity','is', {'type': 'Shot', 'id':shotId } ]
+        taskFilter = []
+        for taskName in taskValuesList:
+            taskFilter.append( ['sg_task', 'name_contains', taskName  ] )
+
+        Complex_TaskFilter    ={
+            "filter_operator": "any",
+            "filters": taskFilter
+            }
+
+        orderList = [{'field_name':'id','direction':'desc'}]
+        lastVersionDictList = self.sg.find("Version", [projectFilter, shotFilter, Complex_TaskFilter ], fields = ["sg_task","user", "created_at", "image", "sg_path_to_movie", "code"] , limit = 1, order = orderList  )
+        lastVersionId = False
+        if lastVersionDictList :
+            lastVersionId = lastVersionDictList[0]["id"]
+
+
+
+        projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
+        idNoteFilter = ['id','is', threadCommandArgs[2] ]
         linkIsVersionFilter = ['note_links', 'type_is' , ['Version'] ]
-        pprint( "#        Query SG\n")
+
 
         value = self.sg.find_one("Note", [projectFilter , idNoteFilter ], ['note_links', 'replies'] )
 
 
-
-        pprint( "#        Query SG DONE\n")
         if value :
             versionString =""
             for noteLink in value["note_links"] :
@@ -310,19 +379,27 @@ class sg_query(QtCore.QThread) :
                     if splits :
                         versionString = splits[-1]
                     
+
                     break
-            pprint("EMIT to UI queryNoteVersion \n")    
-            self.SIGNAL_queryNoteVersion.emit( [threadCommandArgs,versionString, len( value["replies"] )])
-        pprint( "#     Query Version and Replies number END\n\n")
+
+            if versionString :
+                if noteLink["id"] == lastVersionId :
+                    lastVersionId = True
+                else :
+                    lastVersionId = False
+            else :
+                lastVersionId = True
+
+            self.SIGNAL_queryNoteVersion.emit( [threadCommandArgs[2],versionString, len( value["replies"]), lastVersionId ])
+
         #print threadCommandArgs, threadCommandCallBack
 
     @decorateur_try_except
     def downloadAttachement(self, attachementDict ) :
-        pprint( "#     Get Note attachement \n")
+
 
         attachmentFileName = os.path.join( self.tempPathAttachement, u"attachment_%i_%s"%(  attachementDict['id'], attachementDict['filename']  ) )
         if not os.path.isfile(attachmentFileName ) :
-            pprint( "#         Downloading")
             self.sg.download_attachment(attachementDict, attachmentFileName ) 
         
         attachementDict["fileOnDisk"] = attachmentFileName
@@ -371,14 +448,14 @@ class sg_query(QtCore.QThread) :
 
     @decorateur_try_except
     def setNoteStatus(self, NoteData, threadCommandCallBack):
-        pprint( "#     Set note status")
+
         self.sg.update("Note",NoteData[0]['id'], { 'sg_status_list':NoteData[0]["new_sg_status_list"] } )
         self.SIGNAL_replyNote.emit(  [NoteData[0], False ] )
 
 
     @decorateur_try_except
     def setNoteType(self, NoteData , threadCommandCallBack):
-        pprint("#      Set note type")
+
         self.sg.update("Note",NoteData[0]['id'], { 'sg_note_type' : NoteData[0]["new_sg_note_type"] } )
         self.SIGNAL_refreshNote.emit( [NoteData[0], False ] )
 
@@ -387,9 +464,34 @@ class sg_query(QtCore.QThread) :
         self.SIGNAL_refreshNote.emit( [ {"id" : noteId[0] } , u"Delete" ] )
 
 
+    def linkToLastVersion(self, data, callBack = None):
+        projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
+
+        shotId = data[0]
+        taskValuesList = data[1]
+        noteId = data[2]
+
+
+        shotFilter    = ['entity','is', {'type': 'Shot', 'id':shotId } ]
+        taskFilter = []
+        for taskName in taskValuesList:
+            taskFilter.append( ['sg_task', 'name_contains', taskName  ] )
+
+        Complex_TaskFilter    ={
+            "filter_operator": "any",
+            "filters": taskFilter
+            }
+
+        orderList = [{'field_name':'id','direction':'desc'}]
+        lastVersionDictList = self.sg.find("Version", [projectFilter, shotFilter, Complex_TaskFilter ], fields = ["sg_task","user", "created_at", "image", "sg_path_to_movie", "code"] , limit = 1, order = orderList  )
+        if lastVersionDictList :
+            versionDict = lastVersionDictList[-1]
+            shotDict = self.sg.find_one("Shot", [projectFilter, ["id",'is', shotId] ] )
+            self.sg.update("Note", noteId, {"note_links" : [versionDict, shotDict ] })
+            self.SIGNAL_refreshNote.emit( [ {"id" : noteId} , False ] )
+
     @decorateur_try_except
     def replyNote(self, replyNoteData, threadCommandCallBack ) :
-        pprint( "#     Single Reply to Note") 
 
         dReply = {
                  'entity': {'type':'Note','id':replyNoteData[1]['id'] },
@@ -397,21 +499,21 @@ class sg_query(QtCore.QThread) :
                  } 
         
         if  replyNoteData[0]['content']  != "" :       
-            pprint( "#         create Reply")
+
             self.sg.create("Reply", dReply )
 
-            pprint( "Creating reply \n" )
+
 
 
         for attachToUpload in replyNoteData[0]["uploads"] :
-            pprint( "#         Uploading attachement")
+
             self.sg.upload("Note", replyNoteData[1]['id'], attachToUpload )
 
-            pprint( "uploading " + str(  attachToUpload ) + "\n")
+
 
         if replyNoteData[1].has_key("new_sg_status_list") :
             #if replyNoteData[1]["new_sg_status_list"] != replyNoteData[1]["sg_status_list"] :
-            pprint( "#         Updating Status")
+
 
             self.sg.update("Note",replyNoteData[1]['id'], { 'sg_status_list':replyNoteData[1]["new_sg_status_list"] } )
 
@@ -420,7 +522,7 @@ class sg_query(QtCore.QThread) :
 
     @decorateur_try_except
     def multiReplyNote(self, multiReplyNoteData, threadCommandCallBack ) :
-        pprint( "#     Multi Reply to Note") 
+
         
         for replyNoteData in multiReplyNoteData[1] :
             if  multiReplyNoteData[0]['content']  != "" :
@@ -429,12 +531,10 @@ class sg_query(QtCore.QThread) :
 
         
             for attachToUpload in multiReplyNoteData[0]["uploads"] :
-                pprint( "#         Uploading attachement")
                 self.sg.upload("Note", replyNoteData['id'], attachToUpload )
 
 
             if multiReplyNoteData[1][0].has_key("new_sg_status_list") :
-                pprint( "#         Updating Status")
                 self.sg.update("Note",replyNoteData['id'], { 'sg_status_list':multiReplyNoteData[1][0]["new_sg_status_list"] } )
 
             
@@ -462,9 +562,68 @@ class sg_query(QtCore.QThread) :
         for versionDict in lastVersionList :
             versionDict["downloadedImage"] = self.downloadVersionThumbnail(versionDict)
 
-        plog("EMIT to UI => updateDraw note Version \n")
+
         self.SIGNAL_queryVersion.emit( [ lastVersionList[::-1],shotObj[2]  ] )
-        
+    
+    @decorateur_try_except
+    def getExecutable(self, shotObjAndTaskValues_List, threadCommandCallBack ) :
+        self.SIGNAL_updateLaunchAppWidget.emit( [{"clear" : True},shotObjAndTaskValues_List[0],shotObjAndTaskValues_List[2]] ) 
+        try :
+            import sgtk
+        except :
+            return
+
+        projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
+        shotFilter    = ['entity','is', {'type': 'Shot', 'id': shotObjAndTaskValues_List[0]} ]
+
+        taskDict = self.sg.find_one("Task", [ [ "content",'in', shotObjAndTaskValues_List[1] ], shotFilter ] ,  ["content", "step"] )
+
+
+        new_appLauncherDict = copy.deepcopy( self.appLauncherDict )
+
+        if taskDict and shotObjAndTaskValues_List[2] in new_appLauncherDict.keys() :
+
+            
+            for launcherApp in new_appLauncherDict[shotObjAndTaskValues_List[2]].keys() :
+
+                template =  new_appLauncherDict[shotObjAndTaskValues_List[2]][launcherApp]["template"]
+
+
+                sgshot_Code = self.sg.find_one("Shot", [ ['id','is',shotObjAndTaskValues_List[0]] ],  ["code"] )
+                sgstep = self.sg.find_one("Step", [ ['id','is',taskDict['step']["id"]] ],  ["code","short_name"] )
+
+                step = sgstep['short_name']
+
+                tk = sgtk.sgtk_from_entity(  "Project", self.project)
+                work_template = tk.templates[template]
+                # ' scenes/{Shot}/{Step}/work/{Shot}[_{name}]_v{version}.{maya_ext_work}'
+                fields = {"Shot":sgshot_Code["code"], "Step": step }
+
+                work_file_paths = tk.paths_from_template(work_template, fields, ["version" ], skip_missing_optional_keys=True)
+
+                work_file_paths_withName_dict = {}
+                work_file_paths_list = []
+                for input_path in sorted( work_file_paths ) :
+
+                    input_fields =  work_template.get_fields(input_path)
+                    if input_fields.has_key("name") :
+                        if work_file_paths_withName_dict.has_key(input_fields["name"]) :
+                            work_file_paths_withName_dict[input_fields["name"]].append( input_path )
+                        else :
+                            work_file_paths_withName_dict[input_fields["name"]] = [ input_path ]
+                    else :
+                        work_file_paths_list.append(input_path)
+                
+                fileNameDictList = {}
+
+                for k,v in work_file_paths_withName_dict.iteritems():
+                    fileNameDictList[k] = sorted(v)[-5:][::-1]
+                
+
+                new_appLauncherDict[shotObjAndTaskValues_List[2]][launcherApp]["files"] = [ sorted(work_file_paths_list)[-5:][::-1], fileNameDictList,  taskDict['id'] ] 
+
+            
+        self.SIGNAL_updateLaunchAppWidget.emit( [new_appLauncherDict,shotObjAndTaskValues_List[0],shotObjAndTaskValues_List[2] ] ) 
 
     def createNote(self, noteDictList, threadCommandCallBack = None) :
 
@@ -496,17 +655,13 @@ class sg_query(QtCore.QThread) :
                 else :
                     noteDict[0]["subject"] = "Note on " + noteDict[2]['code'] + subjectTaskStr
 
-            for k,v in noteDict[0].iteritems() :
-                print k,v
-            print "\n"
+
             resultNote =  self.sg.create("Note", noteDict[0], ["sg_status_list","tag_list","sg_note_type","tasks", "subject", "created_at", "user", "content"] ) 
             
             if noteDict[1] : 
                 for fileName in noteDict[1] :
-                    pprint( "#         Uploading attachement")
                     self.sg.upload("Note", resultNote['id'], fileName )
 
-                    pprint( "uploading " + str(  fileName ) + "\n")           
 
 
             resultNote.update({"shotCode" : noteDict[2]['code'], "shotId" : noteDict[2]['id'] } )
@@ -528,8 +683,7 @@ class sg_query(QtCore.QThread) :
 
 
     def setNoteTask(self, noteSgData_taskValues_list,  threadCommandCallBack = None) :
-        #print noteSgData_taskValues_list[0]
-        #print noteSgData_taskValues_list[1]
+
 
         sg_task = self.sg.find_one("Task", [ [ "content",'in', noteSgData_taskValues_list[1]], ["entity", "is", [{"type" : "Shot", "id": noteSgData_taskValues_list[0]["shotId"] }]  ] ] )
 
@@ -553,15 +707,15 @@ class sg_query(QtCore.QThread) :
                 if link["type"] == "Shot" : 
                     noteDict["shotCode"] = link["name"]
                     noteDict["shotId"] = link["id"]
-
-                    
+        
 
             self.SIGNAL_refreshNote.emit( [ noteDict , True ] )
 
     # RUN THREADING
     def run(self):
         while True:
-            pprint(  str(self.th_id) + "\n")
             host = self.queue.get()
+            pprint(str(host[1])+"\n")
             self.setRunThreadCommand( host[1], host[2], host[3] )
-            self.queue.task_done()
+            taskToDo = float(self.queue.task_done())
+            self.SIGNAL_pbar.emit( taskToDo  )

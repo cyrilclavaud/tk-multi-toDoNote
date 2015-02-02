@@ -21,6 +21,7 @@ except :
 def decorateur_try_except(fonction_a_decorer):
     
     def wrapper_fonction_a_decorer( *args, **kwargs ):
+        #plog(str(args[0].__class__.__name__ +"."+ fonction_a_decorer.__name__) + "\n")
         try :
             return fonction_a_decorer( *args, **kwargs )
 
@@ -76,22 +77,37 @@ def getRessources(filename):
     return os.path.join(os.path.dirname(__file__),u"ressources",filename)
 
 def getTempPath():
-    return os.environ[u'TEMP']
+    return "c:/temp/ok" #os.environ[u'TEMP']
 
 def getPathToImagePlugins():
     return "Z:/sharedPython2.6/site-packages_win64/PyQt4/plugins"
 
 def getPathToShotgunApi():
-    return "Z:/Dev/cyril/python/PACKAGES"
+
+    path = ""
+    if sys.platform == "darwin":
+        path = "Z:/Dev/cyril/python/PACKAGES"
+
+    elif sys.platform == "linux2":
+        path = "Z:/Dev/cyril/python/PACKAGES"
+
+    elif sys.platform == "win32":
+        path = "Z:/Dev/cyril/python/PACKAGES"
+
+    if os.path.exists(path) :
+        return path
+    else : 
+        None
+
+
+
 
 def OS_convertPath(path):
     if sys.platform == "darwin":
         return path
 
-
     elif sys.platform == "linux2":
         return path
-
 
     elif sys.platform == "win32":
         return path.replace( "//server01/shared2/"  , "S:\\")

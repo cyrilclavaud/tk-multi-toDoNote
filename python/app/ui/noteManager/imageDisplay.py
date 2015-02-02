@@ -25,7 +25,6 @@ class lab(QtGui.QLabel) :
 class ImageViewer(QtGui.QMainWindow):
     @decorateur_try_except
     def __init__(self,  parent=None):
-        plog("ImageViewer.__init__\n")
         super(ImageViewer, self).__init__(parent)
 
         self.printer = QtGui.QPrinter()
