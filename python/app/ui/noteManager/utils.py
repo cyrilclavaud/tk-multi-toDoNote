@@ -77,7 +77,7 @@ def getRessources(filename):
     return os.path.join(os.path.dirname(__file__),u"ressources",filename)
 
 def getTempPath():
-    return "c:/temp/ok" #os.environ[u'TEMP']
+    return os.environ[u'TEMP']
 
 def getPathToImagePlugins():
     return "Z:/sharedPython2.6/site-packages_win64/PyQt4/plugins"
