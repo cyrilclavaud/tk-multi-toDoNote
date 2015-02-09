@@ -111,11 +111,9 @@ class sg_query(QtCore.QThread) :
 
 
         if not os.path.isdir( self.tempPath ) :
-            print u"Creating temp folder ",  self.tempPath
             os.makedirs(self.tempPath)
     
         if not os.path.isdir( self.tempPathAttachement ) :
-            print u"Creating temp folder ",  self.tempPathAttachement
             os.makedirs(self.tempPathAttachement)
 
 
@@ -171,8 +169,8 @@ class sg_query(QtCore.QThread) :
             self.setNoteTask(threadCommandArgs, threadCommandCallBack)
 
         elif stringCommandSwitch == u"getExecutable" :
-            pass
-            #self.getExecutable(threadCommandArgs, threadCommandCallBack)
+            #pass
+            self.getExecutable(threadCommandArgs, threadCommandCallBack)
 
         elif stringCommandSwitch == u"linkToLastVersion" :
             self.linkToLastVersion(threadCommandArgs, threadCommandCallBack )
@@ -227,7 +225,6 @@ class sg_query(QtCore.QThread) :
                 hex_dig = hash_object.hexdigest()
                 thumbNameFile = os.path.join( self.tempPath, u"thumbnail_%s_%i_%s.jpg"%( entityDict['type'] , entityDict['id'], hex_dig ) )
 
-                plog( str(entityDict['image']) +"\n") 
                 if not os.path.isfile(thumbNameFile ):
                     urllib.urlretrieve(entityDict['image'], thumbNameFile)
 
@@ -590,7 +587,10 @@ class sg_query(QtCore.QThread) :
     
     @decorateur_try_except
     def getExecutable(self, shotObjAndTaskValues_List, threadCommandCallBack ) :
-        self.SIGNAL_updateLaunchAppWidget.emit( [{"clear" : True},shotObjAndTaskValues_List[0],shotObjAndTaskValues_List[2]] ) 
+        
+
+
+        self.SIGNAL_updateLaunchAppWidget.emit( [{"clear" : True}, shotObjAndTaskValues_List[0], shotObjAndTaskValues_List[2], shotObjAndTaskValues_List[3]] ) 
         try :
             import sgtk
         except :
@@ -599,7 +599,9 @@ class sg_query(QtCore.QThread) :
         projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
         shotFilter    = ['entity','is', {'type': 'Shot', 'id': shotObjAndTaskValues_List[0]} ]
 
-        taskDict = self.sg.find_one("Task", [ [ "content",'in', shotObjAndTaskValues_List[1] ], shotFilter ] ,  ["content", "step"] )
+        taskDict = []
+        if shotObjAndTaskValues_List[1] :
+            taskDict = self.sg.find_one("Task", [ [ "content",'in', shotObjAndTaskValues_List[1] ], shotFilter ] ,  ["content", "step"] )
 
 
         new_appLauncherDict = copy.deepcopy( self.appLauncherDict )
@@ -646,7 +648,7 @@ class sg_query(QtCore.QThread) :
                 new_appLauncherDict[shotObjAndTaskValues_List[2]][launcherApp]["files"] = [ sorted(work_file_paths_list)[-5:][::-1], fileNameDictList,  taskDict['id'] ] 
 
             
-        self.SIGNAL_updateLaunchAppWidget.emit( [new_appLauncherDict,shotObjAndTaskValues_List[0],shotObjAndTaskValues_List[2] ] ) 
+        self.SIGNAL_updateLaunchAppWidget.emit( [new_appLauncherDict,shotObjAndTaskValues_List[0], shotObjAndTaskValues_List[2], shotObjAndTaskValues_List[3] ] ) 
 
     def createNote(self, noteDictList, threadCommandCallBack = None) :
 

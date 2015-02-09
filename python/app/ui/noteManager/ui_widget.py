@@ -31,14 +31,14 @@ class toggleBtn(QtGui.QPushButton) :
 
 class loadingWidget(QtGui.QWidget) :
     @decorateur_try_except
-    def __init__(self, parent = None):
+    def __init__(self, intSize = 50, parent = None):
         QtGui.QWidget.__init__(self, parent)
          
         # Load the file into a QMovie
-        self.movie = QtGui.QMovie(getRessources( "preloader.gif"), QtCore.QByteArray(), self)
+        self.movie = QtGui.QMovie(getRessources( "preloader_%i.gif"%intSize), QtCore.QByteArray(), self)
          
         size = self.movie.scaledSize()
-        self.setGeometry(50, 50, size.width(), size.height())
+        self.setGeometry(intSize, intSize, size.width(), size.height())
 
          
         self.movie_screen = QtGui.QLabel()

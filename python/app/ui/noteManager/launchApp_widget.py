@@ -15,6 +15,9 @@ except :
 import utils
 from utils import *
 
+import ui_widget
+from ui_widget import *
+
 import os
 
 class launchBtn(QtGui.QPushButton) :
@@ -100,38 +103,64 @@ class launchBtn(QtGui.QPushButton) :
 
 
 class LaunchApp_widget( QtGui.QWidget ):
+    @decorateur_try_except    
+    def paintEvent(self, pe):
+        opt = QtGui.QStyleOption()
+        opt.initFrom(self)
+        p = QtGui.QPainter(self)
+        s = self.style()
+        s.drawPrimitive(QtGui.QStyle.PE_Widget, opt, p, self)
+
     @decorateur_try_except
-    def __init__(self, new_appLauncherDict, shotId, taskName, empty = False  ) :
+    def __init__(self, new_appLauncherDict, shotId, taskName, entityCode,  empty = False  ) :
+
+        
 
         QtGui.QWidget.__init__(self)
+        self.setAutoFillBackground(True)
+        
+        #"background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #9dd53a, stop: .5 #a1d54f, stop: .51 #80c217, stop: 1 #7cbc0a);"
+
         self.eng = None
         self.shotId = shotId
         self.taskName = taskName
         self.empty = empty
 
-        layout = QtGui.QVBoxLayout()
+        layout = QtGui.QHBoxLayout()
         layout.setContentsMargins(0,0,0,0)
         layout.setSpacing(2)
         self.setLayout(layout)
 
+        
+        lab = QtGui.QLabel("<b><font color='#30A6E3'>" + str(taskName) + " "+ str(entityCode)+ "</font></b>")
+        lab.setMinimumHeight(32)
+
+        layout.addSpacing(9)
+        layout.addWidget(QtGui.QLabel("<b><font color='#191919'> Launch Bar </font></b>"))
+        layout.addStretch()
+        layout.addWidget(lab)
+        layout.addSpacing(9)
+
         if empty :
-            lab = QtGui.QLabel()
-            lab.setMaximumWidth(32)
-            lab.setMaximumHeight(32)
-            layout.addWidget(lab)
+            if shotId != 0 :
+                layout.addWidget(loadingWidget(intSize = 32 ))
             return
 
         try :
             self.eng = sgtk.platform.current_engine()
+
+
         except :
             self.eng = None 
             return
 
-        self.launchLayout = QtGui.QVBoxLayout()
+
+        self.launchLayout = QtGui.QHBoxLayout()
         self.launchLayout.setContentsMargins(0,0,0,0)
         self.launchLayout.setSpacing(2)
-        layout.addStretch()
+        
         layout.addLayout(self.launchLayout)
+
         for task in new_appLauncherDict.keys():
             for appLauncher in new_appLauncherDict[task].keys():
                 if new_appLauncherDict[task][appLauncher].has_key("files") :

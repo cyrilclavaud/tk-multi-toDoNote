@@ -35,7 +35,7 @@ except :
 def decorateur_try_except(fonction_a_decorer):
     
     def wrapper_fonction_a_decorer( *args, **kwargs ):
-        #plog(str(args[0].__class__.__name__ +"."+ fonction_a_decorer.__name__) + "\n")
+
         try :
             return fonction_a_decorer( *args, **kwargs )
 

@@ -437,9 +437,6 @@ class noteLayoutWidget(QtGui.QWidget) :
 
 
 
-            if  comboFilterWidgetList[0]:
-                pprint ("what")
-                #self.getVersion(0)
 
         else :
             selectLabel = QtGui.QLabel("Select a Shot")
@@ -506,6 +503,10 @@ class noteLayoutWidget(QtGui.QWidget) :
         # Reply widget
         if self.data :
             if not self.multiDisplay :
+                
+
+                
+
                 replyDataList = self.data[0]["queriedReplies"] #[0,1,2]
                 
                 myform = QtGui.QVBoxLayout()
@@ -663,15 +664,12 @@ class noteLayoutWidget(QtGui.QWidget) :
     def getVersion(self, idx):
 
 
-        pprint("\n1 " + str(self.taskFilterWidget.widget.currentText()) + "  ")
-
         shotIdx = self.shotComboBox.currentIndex()
         if self.my_versionWidgetCombo :
             self.my_versionWidgetCombo.setOnLoading()
 
 
-
-        self.queue.put([-5, u"getExecutable",   [self.shotWidgetItemList[shotIdx]["id"], self.taskFilterWidget.retrieveDictFromSelection(), str(self.taskFilterWidget.widget.currentText())  ] , None ] ) 
+        self.queue.put([-5, u"getExecutable",   [self.shotWidgetItemList[shotIdx]["id"], self.taskFilterWidget.retrieveDictFromSelection(), str(self.taskFilterWidget.widget.currentText()), self.shotWidgetItemList[shotIdx]["code"] ] , None ] ) 
         self.queue.put([0, u"getVersion",  [self.shotWidgetItemList[shotIdx]["id"], self.taskFilterWidget.retrieveDictFromSelection(), [self.shotComboBox.currentText(), self.taskFilterWidget.widget.currentText() ] ] , None ] )
 
 

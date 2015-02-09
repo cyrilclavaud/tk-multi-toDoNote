@@ -151,7 +151,8 @@ class myQTree( QtGui.QTreeWidget ):
 
     @decorateur_try_except
     def setNoteStatus_slot(self, status):
-        print status
+        return
+        #print status
 
     @decorateur_try_except
     def drawTree(self, painter, region ) :
@@ -343,12 +344,12 @@ class Example(QtGui.QWidget):
 
         self.InitOnShotName = {"id":0}
         self.InitFilterOnTaskName = None
+        self.engineName = None
 
         self._app = None
         try :
             self._app = sgtk.platform.current_bundle()
 
-            #self.__tk.pipeline_configuration.get_data_roots().values()
 
 
             projectDict = self._app.context.project
@@ -358,9 +359,11 @@ class Example(QtGui.QWidget):
             userDict = self._app.context.user
             pprint("User :" + str( userDict ) + "\n")
 
-            #print str(dir( self._app.context) )
+
             if self._app.context.task :
                 self.InitFilterOnTaskName = self._app.context.task["name"]
+            elif self._app.context.step :
+                self.InitFilterOnTaskName = self._app.context.step["name"]
 
             entityDict = self._app.context.entity
             pprint("Entity : " +  str( entityDict ) + "\n")
@@ -370,6 +373,14 @@ class Example(QtGui.QWidget):
 
                     self.InitOnShotName= entityDict
                     pprint("init not manager on shot "+ str(self.InitOnShotName) + "\n")
+
+            self.eng = sgtk.platform.current_engine()
+
+            if self.eng :
+                self.engineName = self.eng.instance_name
+
+
+
         except :
             pprint(str( "cant get context entity") + "\n")
 
@@ -417,10 +428,13 @@ class Example(QtGui.QWidget):
             type_mask = maskList[1]
             status_mask = maskList[2]
 
-        if task_mask :
+
+        if self.InitFilterOnTaskName  :
+            task_entriesDictList = self.setCheckedFromValue(task_entriesDictList, [self.InitFilterOnTaskName] + ["NoTask"] )
+        elif task_mask :
             task_entriesDictList = self.setCheckedFromCheckedList(task_entriesDictList, task_mask )   
         else :
-            task_entriesDictList = self.setCheckedFromValue(task_entriesDictList, [self.InitFilterOnTaskName] + ["NoTask"] )   
+            task_entriesDictList = self.setCheckedFromValue(task_entriesDictList, [None] )
 
         self.taskFilterWidget =  comboFilterWidget2( {"name":"Task" , "icon": "task.png"}, task_entriesDictList, multiCheckable = True )
 
@@ -549,10 +563,10 @@ class Example(QtGui.QWidget):
 
 
     def initUI(self):
-        mainLayout = QtGui.QVBoxLayout() 
-        mainLayout.setContentsMargins(0,0,0,0)
-        mainLayout.setSpacing(0)
-        self.setLayout(mainLayout)
+        self.mainLayout = QtGui.QVBoxLayout() 
+        self.mainLayout.setContentsMargins(0,0,0,0)
+        self.mainLayout.setSpacing(0)
+        self.setLayout(self.mainLayout)
         layout = QtGui.QHBoxLayout()
         layout.setContentsMargins(0,0,0,0)
 
@@ -664,7 +678,7 @@ class Example(QtGui.QWidget):
 
         horizontalSplitter.setObjectName("verti")
 
-        mainLayout.addWidget(horizontalSplitter)
+        self.mainLayout.addWidget(horizontalSplitter)
 
 
         self.progressBar = QtGui.QProgressBar()
@@ -677,13 +691,13 @@ class Example(QtGui.QWidget):
                  }
 
                  QProgressBar::chunk {
-                     background-color: #05B8DD;
+                     background-color: #30A6E3;
                      width: 20px;
                  }"""
 
         self.progressBar.setStyleSheet(style)
 
-        mainLayout.addWidget(self.progressBar)
+        self.mainLayout.addWidget(self.progressBar)
 
         self.splitter = QtGui.QSplitter()
         self.splitter.setObjectName("hori")
@@ -733,6 +747,10 @@ class Example(QtGui.QWidget):
         self.splitter.setStretchFactor( 1, 1 )
         self.splitter.setStretchFactor( 2, 0 )
 
+
+
+        self.updateLauncherWidget( [{"clear":True}, 0 , "", "" ]) 
+         #w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3] ) 
 
 
         self.serialize_comboFilterWidget(False)
@@ -968,6 +986,15 @@ class Example(QtGui.QWidget):
 
 
         if noteData :
+            if len(noteData) == 1 :
+
+                taskValues = [] 
+                taskName = ""
+                if noteData[0]["tasks"] :
+                    taskValues = self.taskFilterWidget.retrieveValueFromName( noteData[0]["tasks"][0]["name"] )
+                    taskName =   self.taskFilterWidget.retrieveNameFromValue( noteData[0]["tasks"][0]["name"] )
+    
+                self.queue.put([-5, u"getExecutable",   [noteData[0]["shotId"], taskValues, taskName , noteData[0]["shotCode"] ] , None ] )
 
             self.queue.put( [ 0 , u"queryNoteContent"  , noteData , None ] )
 
@@ -1003,11 +1030,9 @@ class Example(QtGui.QWidget):
     @decorateur_try_except
     def shotTreeClicked(self, forceRedraw = False) :
         
+        if not self.myTree.selectedItems() :
+            self.updateLauncherWidget( [{"clear":True}, 0 , "", "" ]) 
 
-        #print "Garbage collection thresholds: " , gc.get_threshold()
-
-        #collected = gc.collect()
-        #print "Garbage collector: collected %d objects." % (collected)
 
         if not forceRedraw :
             redrawTreeNote = False
@@ -1152,14 +1177,54 @@ class Example(QtGui.QWidget):
     ############################################
 
     @decorateur_try_except
-    def updateLauncherWidget(self, obj) :      
-        w = self.splitter.widget(3)
+    def updateLauncherWidget(self, obj) :
+        if not self.engineName in ["tk-shotgun", "tk-desktop"] :
+            return 
+            
+        w = self.mainLayout.itemAt(2)
         if w :
-            w.setParent(None) 
+            w = w.widget()
+            if obj[1] == 0 :
+                w.setParent(None)
+                w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True ) 
+                w.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")                    
+                self.mainLayout.addWidget(w)
+                return 
+            
+            if w.shotId == obj[1] and w.taskName == obj[2] :
+                if obj[0].has_key("clear"):
+                    return
+                else :
+                    if w.empty :
+                        w.setParent(None)
+                        w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3] ) 
+                        w.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")
+
+                        self.mainLayout.addWidget(w)
+
+                    return
+            else :
+                if obj[0].has_key("clear") :
+                    w.setParent(None)
+                    w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True ) 
+                    w.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")
+                    self.mainLayout.addWidget(w)
+                else :
+                    return
+                    w.setParent(None)
+                    w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True ) 
+                    w.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")                    
+                    self.mainLayout.addWidget(w)
+        else :
+            w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True ) 
+            w.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")                    
+            self.mainLayout.addWidget(w)
+
 
         if not obj[0].has_key("clear") :
-            w = LaunchApp_widget( obj[0], obj[1], obj[2] ) 
-            self.splitter.addWidget(w)
+            w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3] ) 
+            w.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")
+            self.mainLayout.addWidget(w)
 
     @decorateur_try_except
     def updateProgressBar(self, value) :
