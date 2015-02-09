@@ -194,7 +194,10 @@ class noteContentLayout(QtGui.QWidget) :
         if os.path.isfile(attacheFile) :
             import shutil
             import datetime
-            temp_attacheFile = os.path.join(getTempPath(), datetime.datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + os.path.basename(str(attacheFile) ) )
+            temp_attacheFile = os.path.join(getTempPath(), "tmp" ,datetime.datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + os.path.basename(str(attacheFile) ) )
+            if not os.path.isdir(os.path.dirname(temp_attacheFile) ) :
+                os.makedirs( os.path.dirname(temp_attacheFile) )
+
             shutil.copy(attacheFile,temp_attacheFile)
             imageWidget = PicButton( temp_attacheFile, overImageName = "pencil.png"  )
             style = " QLabel {  border: 2px solid green;   border-radius: 4px;   padding: 2px;  } "
@@ -211,7 +214,9 @@ class noteContentLayout(QtGui.QWidget) :
         if os.path.isfile(attacheFile) :
             import shutil
             import datetime
-            temp_attacheFile = os.path.join(getTempPath(), datetime.datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + os.path.basename(str(attacheFile) ) )
+            temp_attacheFile = os.path.join(getTempPath(), "tmp" ,datetime.datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + os.path.basename(str(attacheFile) ) )
+            if not os.path.isdir(os.path.dirname(temp_attacheFile) ) :
+                os.makedirs( os.path.dirname(temp_attacheFile) )
             shutil.copy(attacheFile,temp_attacheFile)
             imageWidget = PicButton( temp_attacheFile, overImageName = "pencil.png" )
             style = " QLabel {  border: 2px solid green;   border-radius: 4px;   padding: 2px;  } "
@@ -337,6 +342,7 @@ class noteLayoutWidget(QtGui.QWidget) :
 
 
 
+
         self.replyListWidget = None # hold Replies, if any !
 
 
@@ -364,6 +370,8 @@ class noteLayoutWidget(QtGui.QWidget) :
                 titleGridLayout.addWidget(statusLabelText, 1,0)
         
         elif  comboFilterWidgetList[0] :
+
+
             self.queue = threadQueue
 
             idx = 0
@@ -382,7 +390,6 @@ class noteLayoutWidget(QtGui.QWidget) :
                 self.shotComboBox.setEnabled(False)
             
 
-
             idx +=1
             self.taskFilterWidget = comboFilterWidget2( *comboFilterWidgetList[1].retrieveDict(), showLabel = False )
 
@@ -392,12 +399,19 @@ class noteLayoutWidget(QtGui.QWidget) :
             titleGridLayout.addWidget(QtGui.QLabel("Task"), idx,0)
             titleGridLayout.addWidget(self.taskFilterWidget , idx,1)
 
+ 
+
 
             idx +=1
             self.typeFilterWidget = comboFilterWidget2(*comboFilterWidgetList[2].retrieveDict(),showLabel = False )
+
+
             comboFilterWidgetList[2].SIGNAL_currentIndexesChanged.connect(self.typeFilterWidget.setMyCurrentFromIndexes)
+
             titleGridLayout.addWidget(QtGui.QLabel("Type"), idx,0)
             titleGridLayout.addWidget(self.typeFilterWidget, idx,1)
+
+
 
 
             idx +=1
@@ -420,6 +434,8 @@ class noteLayoutWidget(QtGui.QWidget) :
             line.setFrameShape(QtGui.QFrame.HLine)
             line.setFrameShadow(QtGui.QFrame.Sunken)
             layout.addWidget(line)
+
+
 
             if  comboFilterWidgetList[0]:
                 pprint ("what")

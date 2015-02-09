@@ -53,6 +53,7 @@ class sg_query(QtCore.QThread) :
     SIGNAL_pbar = _signal(int)
 
     th_id = 0
+
     @decorateur_try_except
     def __init__(self, app ):
 
@@ -75,6 +76,7 @@ class sg_query(QtCore.QThread) :
                 from shotgun_api3 import Shotgun
                 self.sg = Shotgun(self.SERVER_PATH, self.SCRIPT_NAME, self.SCRIPT_KEY)
             else :
+              
                 self.sg = app.engine.tank.shotgun # too slow
 
             self.sg_userDict = app.context.user
@@ -85,7 +87,12 @@ class sg_query(QtCore.QThread) :
         self.tempPath = None       
         self.tempPathAttachement = None
         self.tempPath_uploadAttachment = None
+        self.typeFilterWidget = None
 
+
+    def setTypeFilterWidget(self, typeFilterWidget ) :
+        self.typeFilterWidget=typeFilterWidget 
+        
 
         # set default project id 
     def setAppLauncher(self, appLauncherDict ) :
@@ -99,7 +106,7 @@ class sg_query(QtCore.QThread) :
         self.tempPath = os.path.join( getTempPath(), u"tk_shotgun_toDoApp_%i"%self.project)
         
         self.tempPathAttachement = os.path.join( getTempPath(), u"tk_shotgun_toDoApp_%i"%self.project, u"attachment")
-        #self.tempPath_uploadAttachment = os.path.join( getTempPath(), u"tk_shotgun_toDoApp_%i"%self.project, u"upload_attachment")
+
 
         if not os.path.isdir( self.tempPath ) :
             print u"Creating temp folder ",  self.tempPath
@@ -232,11 +239,16 @@ class sg_query(QtCore.QThread) :
     def queryNotes(self, args = None, parentWidget = None):
 
 
-        projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
-        shotFilter    = ['note_links','is', { 'type':'Shot', 'id':args['id'] } ]
+        projectFilter  = ['project','is', { 'type':'Project', 'id':self.project} ]
+        shotFilter     = ['note_links','is', { 'type':'Shot', 'id':args['id'] } ]
 
-        noteList = self.sg.find("Note", [ projectFilter, shotFilter ] , ["sg_status_list","tag_list","sg_note_type","tasks", "subject", "created_at", "user", "content"] )
 
+        filterList = [projectFilter, shotFilter ]
+        noteList = []
+        if  self.typeFilterWidget.getfilterList() :
+            filterList.append(['sg_note_type', 'in', self.typeFilterWidget.getfilterList() ]) 
+            noteList = self.sg.find("Note", filterList , ["sg_status_list","tag_list","sg_note_type","tasks", "subject", "created_at", "user", "content"] )
+        #noteList = self.sg.find("Note", [ projectFilter, shotFilter ] , ["sg_status_list","tag_list","sg_note_type","tasks", "subject", "created_at", "user", "content"] )
 
         self.SIGNAL_setNoteList.emit(  [ [ "shotAsset_%i"%args["id"] , args['code'], args['id']]  ,noteList, parentWidget ] )
 
@@ -715,7 +727,7 @@ class sg_query(QtCore.QThread) :
     def run(self):
         while True:
             host = self.queue.get()
-            pprint(str(host[1])+"\n")
+            self.SIGNAL_pbar.emit( self.queue.getCount()  )
             self.setRunThreadCommand( host[1], host[2], host[3] )
-            taskToDo = float(self.queue.task_done())
-            self.SIGNAL_pbar.emit( taskToDo  )
+            self.queue.task_done()
+            self.SIGNAL_pbar.emit( self.queue.getCount()  )

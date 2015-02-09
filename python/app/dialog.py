@@ -40,17 +40,18 @@ def show_dialog(app_instance):
     app_instance.engine.show_dialog("To-Do Note App", app_instance, AppDialog )    
 
     dialog = QtGui.QApplication.activeWindow()
-    flags = QtCore.Qt.Window
+    if dialog :
+        flags = QtCore.Qt.Window
 
-    flags |= QtCore.Qt.WindowTitleHint
-    flags |= QtCore.Qt.WindowSystemMenuHint   
-    flags |= QtCore.Qt.WindowMinimizeButtonHint
-    flags |= QtCore.Qt.WindowMaximizeButtonHint
-    flags |= QtCore.Qt.WindowCloseButtonHint
-    flags |= QtCore.Qt.WindowContextHelpButtonHint
-    flags |= QtCore.Qt.WindowShadeButtonHint
-    
-    #flags |= QtCore.Qt.WindowStaysOnTopHint
-    
-    dialog.setWindowFlags(flags) 
-    dialog.show()
+        flags |= QtCore.Qt.WindowTitleHint
+        flags |= QtCore.Qt.WindowSystemMenuHint   
+        flags |= QtCore.Qt.WindowMinimizeButtonHint
+        flags |= QtCore.Qt.WindowMaximizeButtonHint
+        flags |= QtCore.Qt.WindowCloseButtonHint
+        flags |= QtCore.Qt.WindowContextHelpButtonHint
+        flags |= QtCore.Qt.WindowShadeButtonHint
+        
+        #flags |= QtCore.Qt.WindowStaysOnTopHint
+        
+        dialog.setWindowFlags(flags) 
+        dialog.show()

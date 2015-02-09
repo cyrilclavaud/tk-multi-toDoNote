@@ -9,6 +9,7 @@ import os
 import re
 import sys
 import Queue
+import gc
 
 import utils
 from utils import *
@@ -74,6 +75,32 @@ class myQTree( QtGui.QTreeWidget ):
         self.itemClicked.connect( self.close_editItem )
 
         self.lastItem_edited = None
+
+        
+        
+
+    def columHasMoved(self, i ,j ,k, save = True  ):
+        if save == False :
+
+            pathToDataFile =   os.path.join(getUserTempPath(), "columnOrder.dat") 
+            if os.path.isfile(pathToDataFile) :
+
+                headerStateFile = QtCore.QFile( pathToDataFile )
+                headerStateFile.open(QtCore.QIODevice.ReadOnly)
+                fileBuffer = QtCore.QDataStream(headerStateFile) 
+                headerState = QtCore.QByteArray()
+                fileBuffer >> headerState
+                self.header().restoreState(headerState)
+                headerStateFile.close()
+        
+        else :
+
+            pathToDataFile =   os.path.join(getUserTempPath(), "columnOrder.dat") 
+            headerStateFile = QtCore.QFile( pathToDataFile )
+            headerStateFile.open(QtCore.QIODevice.WriteOnly)
+            fileBuffer = QtCore.QDataStream(headerStateFile) 
+            fileBuffer << self.header().saveState()
+            headerStateFile.close()
 
     def onCustomContextMenuRequested( self, pos) :
         item = self.itemAt(pos);
@@ -242,9 +269,23 @@ class myQTree( QtGui.QTreeWidget ):
 
 
 class joinQueue( Queue.PriorityQueue ) :
+    def __init__(self):
+        Queue.PriorityQueue.__init__(self)
+        self.count = 0
+
+
     def put(self, args):
         Queue.PriorityQueue.put(self, args)
+        self.count += 1
         self.join() 
+
+    def task_done(self):
+        Queue.PriorityQueue.task_done(self)
+        self.count -= 1
+        return self.count
+
+    def getCount(self):
+        return self.count
 
 class myQueue( Queue.PriorityQueue ) :
     def __init__(self):
@@ -255,8 +296,11 @@ class myQueue( Queue.PriorityQueue ) :
     def put(self,args):
         
         Queue.PriorityQueue.put(self, args)
+        
         self.count += 1
-       
+
+    def getCount(self):
+        return self.count
 
     def task_done(self):
         Queue.PriorityQueue.task_done(self)
@@ -304,6 +348,7 @@ class Example(QtGui.QWidget):
         try :
             self._app = sgtk.platform.current_bundle()
 
+            #self.__tk.pipeline_configuration.get_data_roots().values()
 
 
             projectDict = self._app.context.project
@@ -328,7 +373,74 @@ class Example(QtGui.QWidget):
         except :
             pprint(str( "cant get context entity") + "\n")
 
+       
+
+        ############# TASK
+
+
+        task_entriesDictList = [ {"text" : "All", "icon" : None, "values": []  },
+                            {"text" : "Compo", "icon" : "task_compo.png", "values": ["Compositing", "Comp", "Compo"] },
+                            {"text" : "Anim", "icon" : "task_animation.png", "values": ["Animation","animation","anim", "Anim"]  },
+                            {"text" : "lighting", "icon" : "task_lit.png" , "values": ["Lighting", "lighting"]  },
+                            {"text" : "Fur", "icon" : "task_fur.png" , "values": ["fur","Fur"] },
+                            {"text" : "modeling", "icon" : "task_modelisation.png" , "values": ["Modeling", "modeling"] },
+                            {"text" : "rigging", "icon" : "task_rig.png" , "values": ["Rig", "rig"] },
+                            {"text" : "layout", "icon" : "task_layout.png" , "values": ["Layout", "layout"] },
+                            {"text" : "NoTask", "icon" : "task.png" , "values": ["NoTask"] }
+                          ]
         
+        ############# TYPE
+
+        type_entriesDictList = [ {"text" : "All", "icon" : None , "values":[], "checked" : False},
+                            {"text" : "To Do", "icon" : "type_toDo.png", "values":["To-do", "To Do"], "checked" : True },
+                            {"text" : "Client", "icon" : "type_client.png", "values":["Client"] , "checked" : False},
+                            {"text" : "Internal", "icon" : "type_internal.png" , "values": ["Internal"], "checked" : False},
+                            {"text" : "Asset Update", "icon" : "type_assetUpdated.png", "values":["Asset Update"] ,"checked" : False },
+                            {"text" : "NoType", "icon" : "type.png" , "values": ["NoType"] , "checked" : False},
+                          ]
+        ############# STATUS
+
+        status_entriesDictList = [ {"text" : "All", "icon" : None, "values":[]} ,
+                            {"text" : "Open", "icon" : "status_opn.png", "values":["opn","Open"], "checked":True} ,
+                            {"text" : "In Progress", "icon" : "status_ip.png", "values":["ip","In Progress"]} ,
+                            {"text" : "Closed", "icon" : "status_clsd", "values":["clsd", "Closed"] } ,
+                          ]
+
+
+        maskList = self.serialize_comboFilterWidget(False)   
+        task_mask = None
+        type_mask = None
+        status_mask = None
+
+        if maskList :
+            task_mask = maskList[0]
+            type_mask = maskList[1]
+            status_mask = maskList[2]
+
+        if task_mask :
+            task_entriesDictList = self.setCheckedFromCheckedList(task_entriesDictList, task_mask )   
+        else :
+            task_entriesDictList = self.setCheckedFromValue(task_entriesDictList, [self.InitFilterOnTaskName] + ["NoTask"] )   
+
+        self.taskFilterWidget =  comboFilterWidget2( {"name":"Task" , "icon": "task.png"}, task_entriesDictList, multiCheckable = True )
+
+
+        if type_mask :
+            type_entriesDictList = self.setCheckedFromCheckedList(type_entriesDictList, type_mask )   
+        else :
+            type_entriesDictList = self.setCheckedFromValue(type_entriesDictList, ["To Do", "NoType"] )
+
+        self.typeFilterWidget = comboFilterWidget2( {"name":"Type" , "icon": "type.png"}, type_entriesDictList, multiCheckable = True ) 
+
+
+        if status_mask :
+            status_entriesDictList = self.setCheckedFromCheckedList(status_entriesDictList, status_mask )   
+        else :
+            status_entriesDictList = self.setCheckedFromValue(status_entriesDictList, ["Open", "ip"] )
+        
+        self.statusFilterWidget = comboFilterWidget2( {"name":"Status" , "icon": "status.png"}, status_entriesDictList, multiCheckable = True  )
+
+
 
         for i in range(10) :
             sg = sg_query( self._app  )            
@@ -336,6 +448,8 @@ class Example(QtGui.QWidget):
             sg.setProjectId(projectId)
             sg.setTempPath()
             sg.setAppLauncher(self.appLauncherDict)
+            sg.setTypeFilterWidget(self.typeFilterWidget)
+
             sg.queue=self.queue
             sg.th_id = i
 
@@ -367,6 +481,18 @@ class Example(QtGui.QWidget):
 
         self.shotTreeSelection_id_List = []
 
+
+    @staticmethod
+    def setCheckedFromCheckedList(entriesDictList, boolList) :
+
+        idx = 0
+        for boolState in boolList :
+            entriesDictList[idx]["checked"] = boolState
+
+            idx+=1
+        return entriesDictList
+
+
     @staticmethod
     def setCheckedFromValue(entriesDictList, valueList ):
         
@@ -379,6 +505,47 @@ class Example(QtGui.QWidget):
                 if value in entriesDict["values"] :
                     entriesDict["checked"] = True
         return entriesDictList
+
+
+    def serialize_comboFilterWidget(self, save = True) :
+
+        if self.InitFilterOnTaskName :
+            return
+
+        
+        if save == False :
+            
+            pathToDataFile =   os.path.join(getUserTempPath(), "noteAppUi_filters.dat") 
+            if os.path.isfile(pathToDataFile) :
+
+
+
+                taskFilterStates = None
+                typeFilterStates = None
+                statusFilterStates = None
+                try :
+                    with open(pathToDataFile) as f :
+                        exec( f.read() )
+                except :
+                    "print cant restore widget state "
+
+                return taskFilterStates, typeFilterStates, statusFilterStates
+            
+        
+        else :
+
+
+            pathToDataFile =   os.path.join(getUserTempPath(), "noteAppUi_filters.dat") 
+            comboFilterStateFile = open( pathToDataFile, "w" )
+            comboFilterStateFile.write("# ToDoNote_App comboFilter state \n")
+            comboFilterStateFile.write("taskFilterStates = " + str( self.taskFilterWidget.getCheckedBoolList() ) + "\n" )
+            comboFilterStateFile.write("typeFilterStates = " + str( self.typeFilterWidget.getCheckedBoolList() ) + "\n" )
+            comboFilterStateFile.write("statusFilterStates = " + str( self.statusFilterWidget.getCheckedBoolList() ) + "\n" )
+
+            comboFilterStateFile.close()
+
+
+
 
 
     def initUI(self):
@@ -395,57 +562,7 @@ class Example(QtGui.QWidget):
         self.refreshUI_Btn =  toggleBtn("PAF")
 
 
-        ############# TASK
 
-
-
-                        
-
-
-        task_entriesDictList = [ {"text" : "All", "icon" : None, "values": []  },
-                            {"text" : "Compo", "icon" : "task_compo.png", "values": ["Compositing", "Comp", "Compo"] },
-                            {"text" : "Anim", "icon" : "task_animation.png", "values": ["Animation","animation","anim", "Anim"]  },
-                            {"text" : "lighting", "icon" : "task_lit.png" , "values": ["Lighting", "lighting"]  },
-                            {"text" : "Fur", "icon" : "task_fur.png" , "values": ["fur","Fur"] },
-                            {"text" : "modeling", "icon" : "task_modelisation.png" , "values": ["Modeling", "modeling"] },
-                            {"text" : "rigging", "icon" : "task_rig.png" , "values": ["Rig", "rig"] },
-                            {"text" : "layout", "icon" : "task_layout.png" , "values": ["Layout", "layout"] },
-                            {"text" : "NoTask", "icon" : "task.png" , "values": ["NoTask"] }
-                          ]
-        
-        task_entriesDictList = self.setCheckedFromValue(task_entriesDictList, [self.InitFilterOnTaskName] + ["NoTask"] )   
-        self.taskFilterWidget =  comboFilterWidget2( {"name":"Task" , "icon": "task.png"}, task_entriesDictList, multiCheckable = True )
-
-
-
-
-        ############# TYPE
-
-        entriesDictList = [ {"text" : "All", "icon" : None , "values":[]},
-                            {"text" : "To Do", "icon" : "type_toDo.png", "values":["To-do", "To Do"],"checked" : True },
-                            {"text" : "Client", "icon" : "type_client.png", "values":["Client"] },
-                            {"text" : "Internal", "icon" : "type_internal.png" , "values": ["Internal"]},
-                            {"text" : "Asset Update", "icon" : "type_assetUpdated.png", "values":["Asset Update"]},
-                            {"text" : "NoType", "icon" : "type.png" , "values": ["NoType"] },
-                          ]
-        entriesDictList = self.setCheckedFromValue(entriesDictList, [None] )
-        self.typeFilterWidget = comboFilterWidget2( {"name":"Type" , "icon": "type.png"}, entriesDictList, multiCheckable = True ) 
-        
-
-
-
-
-
-        ############# STATUS
-
-        entriesDictList = [ {"text" : "All", "icon" : None, "values":[]} ,
-                            {"text" : "Open", "icon" : "status_opn.png", "values":["opn","Open"], "checked":True} ,
-                            {"text" : "In Progress", "icon" : "status_ip.png", "values":["ip","In Progress"]} ,
-                            {"text" : "Closed", "icon" : "status_clsd", "values":["clsd", "Closed"] } ,
-                          ]
-
-        entriesDictList = self.setCheckedFromValue(entriesDictList, ["Open", "ip"] )
-        self.statusFilterWidget = comboFilterWidget2( {"name":"Status" , "icon": "status.png"}, entriesDictList, multiCheckable = True  )
         
 
 
@@ -491,7 +608,7 @@ class Example(QtGui.QWidget):
         self.myTree.setFocusPolicy(QtCore.Qt.NoFocus)
 
 
-        self.myTree2 = myQTree( task_entriesDictList )# QtGui.QTreeWidget() 
+        self.myTree2 = myQTree( self.taskFilterWidget.entriesDictList )# QtGui.QTreeWidget() 
         self.myTree2.setIconSize(QtCore.QSize(128,128))
         self.myTree2.setColumnCount(11)
         self.myTree2.setHeaderLabels(["Note Content","Note count", "Type","Created_at", "User", "v---", "Shot", "Replies", "Shot Assignement"])
@@ -617,17 +734,26 @@ class Example(QtGui.QWidget):
         self.splitter.setStretchFactor( 2, 0 )
 
 
+
+        self.serialize_comboFilterWidget(False)
+
+
+
         self.splitter.splitterMoved.connect(self.resizeFilterLayout  )
 
         self.myTree.itemSelectionChanged.connect(self.shotTreeClicked )
         self.refreshUI_Btn.clicked.connect(  lambda : self.shotTreeClicked( True )  ) 
 
         self.taskFilterWidget.widget.currentIndexChanged.connect( self.updateTree2_withFilter )
-        self.typeFilterWidget.widget.currentIndexChanged.connect( self.updateTree2_withFilter )
+        #self.typeFilterWidget.widget.currentIndexChanged.connect( self.updateTree2_withFilter )
+
+        self.typeFilterWidget.widget.currentIndexChanged.connect( lambda : self.shotTreeClicked( True ) )
         self.statusFilterWidget.widget.currentIndexChanged.connect( self.updateTree2_withFilter )
         self.userNameFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
         self.contentFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
         self.entityAssignedFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
+
+
 
         self.myTree2.SIGNAL_setNoteStatus.connect(self.setNoteStatus)
         self.myTree2.SIGNAL_setNoteType.connect(self.setNoteType)
@@ -638,11 +764,20 @@ class Example(QtGui.QWidget):
         self.myTree2.SIGNAL_linkToLastVersion.connect(self.linkToLastVersion)
 
         self.myTree2.itemSelectionChanged.connect(self.noteTreeClicked )
+        self.myTree2.header().sectionMoved.connect(self.myTree2.columHasMoved)
 
         self.groupByTypeBox.stateChanged.connect(self.refreh_myTree2)
 
+
+        self.taskFilterWidget.widget.currentIndexChanged.connect(lambda : self.serialize_comboFilterWidget( True ) )
+        self.typeFilterWidget.widget.currentIndexChanged.connect(lambda : self.serialize_comboFilterWidget( True ) )
+        self.statusFilterWidget.widget.currentIndexChanged.connect(lambda : self.serialize_comboFilterWidget( True ) )
+
+
         self.spacerItem.changeSize(col1-14, 1)
         self.filteringLayout.invalidate()
+
+        self.myTree2.columHasMoved(0,0,0, False)
 
         self.show()
 
@@ -845,6 +980,8 @@ class Example(QtGui.QWidget):
 
         my_noteLayoutWidget = noteLayoutWidget( None,  [ self.getShotItemList(), self.taskFilterWidget, self.typeFilterWidget, self.statusFilterWidget, taskList ], self.queue )
 
+
+
         my_noteLayoutWidget.SIGNAL_send_NoteContent.connect( self.createNewNote )
 
         my_noteLayoutWidget.updateTaskFilterWidget(taskList)
@@ -867,8 +1004,10 @@ class Example(QtGui.QWidget):
     def shotTreeClicked(self, forceRedraw = False) :
         
 
-       
+        #print "Garbage collection thresholds: " , gc.get_threshold()
 
+        #collected = gc.collect()
+        #print "Garbage collector: collected %d objects." % (collected)
 
         if not forceRedraw :
             redrawTreeNote = False
@@ -1281,7 +1420,7 @@ class Example(QtGui.QWidget):
 
 
         self.queue.put( [ -1 , u"queryNoteVersion"  , [ 0 , [],  int_noteId  ] , None ] )
-        #self.queue.put( [ -1 , u"queryNoteVersion"  , int_noteId , None ] )
+
 
 
         if obj[1]:   
@@ -1307,13 +1446,17 @@ class Example(QtGui.QWidget):
 def main():
     
     app = QtGui.QApplication(sys.argv)
+
     ex = Example()
+
     sys.exit(app.exec_())
+
 
 
 if __name__ == '__main__':
     import os
     from PyQt4 import QtGui, QtCore
+
     main()
 
 

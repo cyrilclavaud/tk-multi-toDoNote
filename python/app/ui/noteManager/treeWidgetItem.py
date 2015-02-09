@@ -20,7 +20,6 @@ from utils import *
 
 
 
-
 class comboFilterWidget2(QtGui.QWidget):
 
 
@@ -28,16 +27,18 @@ class comboFilterWidget2(QtGui.QWidget):
 
     def __init__(self, typeDict , entriesDictList , showLabel = True, multiCheckable = False, parent = None ):
         super(comboFilterWidget2, self).__init__(parent )
-
+ 
 
         layout = QtGui.QHBoxLayout()
         layout.setContentsMargins(0,0,0,0)
         self.setLayout(layout)
 
-        self.typeDict = typeDict
-        self.entriesDictList = entriesDictList
+        self.typeDict =  typeDict 
+        self.entriesDictList =  entriesDictList 
 
-        self.multiCheckable = multiCheckable
+ 
+
+        self.multiCheckable = multiCheckable 
 
         if showLabel :
             label = QtGui.QLabel( typeDict["name"] )
@@ -60,6 +61,7 @@ class comboFilterWidget2(QtGui.QWidget):
                 if entryDict.has_key("checked") :
                     if entryDict["checked"] == True :
                         checkCount+= 1
+
 
 
 
@@ -114,6 +116,7 @@ class comboFilterWidget2(QtGui.QWidget):
             idx +=1
 
 
+
        
         if self.multiCheckable :
             
@@ -126,10 +129,12 @@ class comboFilterWidget2(QtGui.QWidget):
         elif self.widget.count() == 1 :
             self.widget.setEnabled(False)
 
+
+
         layout.addWidget(self.widget)
         if self.multiCheckable :        
             self.widget.currentIndexChanged.connect(self.sendCheckedIndexes)
-   
+
 
     def eventFilter(self, obj, event) :
 
@@ -294,7 +299,8 @@ class comboFilterWidget2(QtGui.QWidget):
     
     @decorateur_try_except
     def retrieveDict(self):
-        return self.typeDict, self.entriesDictList[1:]
+        import copy
+        return copy.deepcopy( self.typeDict ) , copy.deepcopy( self.entriesDictList[1:] )
 
 
     @decorateur_try_except
@@ -326,6 +332,15 @@ class comboFilterWidget2(QtGui.QWidget):
 
         return None
 
+
+    def getCheckedBoolList(self) :
+        boolList = [] #QtCore.QStringList()
+        for dictEntries in  self.entriesDictList :
+            if dictEntries["checked"] :
+                boolList.append(True )
+            else :
+                boolList.append(False )
+        return boolList
 
     def getCheckedIndexes(self ):
         indexesList = []
@@ -513,7 +528,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         elif self.sgData["sg_status_list"] == "ip" : # orange
             #backColor = QtGui.QColor(255, 191, 0, 55)
             backColor = QtGui.QColor(223,210,122, 100)
-            self.setHidden(True)
+
 
         elif self.sgData["sg_status_list"] == "clsd" : # vert
             #backColor = QtGui.QColor(0, 255, 0, 45)
@@ -784,7 +799,8 @@ class taskWidget(QtGui.QTreeWidgetItem) :
         
         
 
-        
+        font = QtGui.QFont("" , 9 , QtGui.QFont.Bold )
+        self.setFont( 0, font );
 
 
         self.setText(0, str(sgData["name"])  )
