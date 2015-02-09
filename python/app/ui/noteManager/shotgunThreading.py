@@ -7,6 +7,8 @@ import sys
 import re
 import urllib
 import copy
+import hashlib
+
 try :
     from sgtk.platform.qt import QtCore, QtGui
     _signal = QtCore.Signal 
@@ -217,13 +219,22 @@ class sg_query(QtCore.QThread) :
 
         i = 0
         for entityDict in args :
-            thumbNameFile = os.path.join( self.tempPath, u"thumbnail_%s_%i.jpg"%( entityDict['type'] , entityDict['id'] ) )
+            
+            
             if entityDict['image'] :
+
+                hash_object = hashlib.sha1(entityDict['image'])
+                hex_dig = hash_object.hexdigest()
+                thumbNameFile = os.path.join( self.tempPath, u"thumbnail_%s_%i_%s.jpg"%( entityDict['type'] , entityDict['id'], hex_dig ) )
+
+                plog( str(entityDict['image']) +"\n") 
                 if not os.path.isfile(thumbNameFile ):
                     urllib.urlretrieve(entityDict['image'], thumbNameFile)
 
 
                 self.SIGNAL_setThumbnail.emit( [  "shotAsset_%i"%entityDict["id"], thumbNameFile ] )
+            else :
+                self.SIGNAL_setThumbnail.emit( [  "shotAsset_%i"%entityDict["id"], getRessources("emptyShot.png") ] )
 
     @decorateur_try_except
     def downloadVersionThumbnail(self, entityDict) :
