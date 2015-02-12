@@ -32,6 +32,7 @@ except :
 
 
 
+
 def decorateur_try_except(fonction_a_decorer):
     
     def wrapper_fonction_a_decorer( *args, **kwargs ):
@@ -58,6 +59,8 @@ def plog(text, clear = None):
 
 
 def perr(text, clear = None):
+
+    print text
 
     a = None
     filename = os.path.join(getUserTempPath(),"ERR_"+outFileName+".txt" ) 
@@ -90,7 +93,12 @@ def getExec(filename):
 def getRessources(filename):
     return os.path.join(os.path.dirname(__file__),u"ressources",filename)
 
-
+def osSystem(path) :
+    if sys.platform == "darwin":
+        #plog('open -a "QuickTime Player 7" %s'%path )
+        os.system("open %s"%path )
+    else :
+        os.system("start %s"%path )
 
 def getTempPath():
     if not os.path.isdir(tempPath) :
@@ -130,7 +138,7 @@ def getPathToShotgunApi():
 
 def OS_convertPath(path):
     if sys.platform == "darwin":
-        return path
+        return path.replace( "\\\\SLEDGE\\vol1", "/mnt/sledge").replace("\\","/")
 
     elif sys.platform == "linux2":
         return path

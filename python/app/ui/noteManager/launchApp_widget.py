@@ -66,17 +66,17 @@ class launchBtn(QtGui.QPushButton) :
 
         fileMenu =  QtGui.QMenu()
         for a in self.values["files"][0]:
-            fct = lambda: self.launchFromPath( a )
+            fct = lambda a = a : self.launchFromPath( a )
             fileMenu.addAction(os.path.basename(a), fct )
         
         for m, files in self.values["files"][1].iteritems() :
             fileNameMenu =  fileMenu.addMenu( m )
             for path in files :
-                fct = lambda: self.launchFromPath( path )
+                fct = lambda path = path : self.launchFromPath( path )
                 fileNameMenu.addAction(os.path.basename(path), fct )
         
-
-        fct = lambda: self.launchFromContext( self.values["files"][2] )
+        path = self.values["files"][2]
+        fct = lambda path = path  : self.launchFromContext( path )
         fileMenu.addAction("Empty Scene",fct )
         return fileMenu
 
@@ -90,6 +90,8 @@ class launchBtn(QtGui.QPushButton) :
         appLauncher._launch_app(context, version=None)
 
     def launchFromPath(self,  path):
+
+
         eng = sgtk.platform.current_engine()
         appLauncher = eng.apps.get(self.launchApp)
 

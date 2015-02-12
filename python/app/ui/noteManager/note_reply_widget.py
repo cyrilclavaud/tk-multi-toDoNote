@@ -28,6 +28,21 @@ import imageDisplay
 import imageScribble
 import imagePicker
 
+
+class GrowingTextEdit(QtGui.QTextEdit):
+
+    def __init__(self, *args, **kwargs):
+        super(GrowingTextEdit, self).__init__(*args, **kwargs)  
+        self.document().contentsChanged.connect(self.sizeChange)
+
+        self.heightMin = 0
+        self.heightMax = 65000
+
+    def sizeChange(self):
+        docHeight = self.document().size().height()
+        if self.heightMin <= docHeight <= self.heightMax:
+            self.setMinimumHeight(docHeight)
+
 class noteContentLayout(QtGui.QWidget) :
     SIGNAL_createReply      = _signal(object)
     SIGNAL_createMultiReply = _signal(object)
@@ -51,51 +66,61 @@ class noteContentLayout(QtGui.QWidget) :
 
         # author
         authorTxt = "unknown" 
-        if self.data :
-
-            authorLabelText = QtGui.QLabel("Author : ")
-            #authorLabelText.setMaximumWidth(50)
-            titleGridLayout.addWidget(authorLabelText, 0,0)
-            authorTxt = "<b>"+self.data["user"]['name']+"</b>"
-            titleGridLayout.addWidget(QtGui.QLabel(authorTxt), 0,1)
-
-        # date 
-        dateLabelText = QtGui.QLabel("Date : ")
-        #dateLabelText.setMaximumWidth(50)
-
-        if self.data :
-            updated_atText =  "<b>"+self.data["created_at"].strftime('%Y-%m-%d %H:%M:%S')+"</b>"
-            titleGridLayout.addWidget(dateLabelText, 1,0, QtCore.Qt.AlignTop )
-            titleGridLayout.addWidget(QtGui.QLabel(updated_atText), 1,1, QtCore.Qt.AlignTop)
-
 
         self.attachmentLayout = QtGui.QHBoxLayout()
-
         self.Qt_noteContent = QtGui.QTextEdit()
 
 
         if self.data :
-            self.Qt_noteContent.setReadOnly(True)
+
             try :
                 self.Qt_noteContent.setPlainText( QtCore.QString.fromUtf8( self.data["content"]) )
             except :
-                self.Qt_noteContent.setPlainText(self.data["content"]  )
+                self.Qt_noteContent.setPlainText(self.data["content"] )
 
             if dataType == "Reply" :
-                titleGridLayout.addWidget(self.Qt_noteContent,0 , 2, 4, 1)
-                layout.addLayout(layoutContainer)
-                layout.addLayout(self.attachmentLayout)
+
                 
-                #self.Qt_noteContent.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
-                #self.Qt_noteContent.setStyleSheet("background-color: rgba(120, 0, 0, 40% )")
-            else :
+                authorHtmlTxt = "<font size=2 color=#BBBBBB>Author : "+self.data["user"]['name']+"</font><br>"
+                dateHtmlTxt   = "<font size=2 color=#BBBBBB>Date : "+self.data["created_at"].strftime('%Y-%m-%d %H:%M:%S')+"</font>"
+                labelText = QtGui.QLabel(authorHtmlTxt+dateHtmlTxt)                
+                
+                contentLabel = QtGui.QLabel(self.data["content"])
+                contentLabel.setAlignment(QtCore.Qt.AlignTop)
+                contentLabel.setStyleSheet("QLabel { color : #F0F0F0 }")
+                contentLabel.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+                
+                titleGridLayout.setHorizontalSpacing(20)
+                titleGridLayout.addWidget(labelText, 0,0, QtCore.Qt.AlignTop )
+                titleGridLayout.addWidget( contentLabel, 0, 1 )
                 layout.addLayout(layoutContainer)
-                layout.addWidget(self.Qt_noteContent)
+                layout.addLayout(self.attachmentLayout)
+                titleGridLayout.setContentsMargins(0,0,0,0)
+                layout.setContentsMargins(0,0,0,0)
+
+            else :
+                authorHtmlTxt = "<font color=#BBBBBB>Author : "+ self.data["user"]['name'] + "</font><br>"
+                dateHtmlTxt = "<font color=#BBBBBB>Date : <b>"+self.data["created_at"].strftime('%Y-%m-%d %H:%M:%S')+"</font></b><br>"
+                labelText = QtGui.QLabel(authorHtmlTxt+dateHtmlTxt)
+                titleGridLayout.addWidget(labelText, 0,0, QtCore.Qt.AlignTop)
+
+                contentLabel = QtGui.QLabel(self.data["content"])
+                contentLabel.setAlignment(QtCore.Qt.AlignTop)
+
+                contentLabel.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+
+                layout.addLayout(layoutContainer)
+                layout.addWidget(contentLabel)
                 layout.addLayout(self.attachmentLayout)
 
-                #self.Qt_noteContent.mouseDoubleClickEvent.connect(self.editNoteContent) 
+                contentLabel.setStyleSheet("QLabel { color : #F0F0F0 ; }")
+                titleGridLayout.setContentsMargins(0,0,0,0)
+                layout.setContentsMargins(0,0,0,0)
 
-        else :
+
+        
+
+        if not self.data : 
             if dataType == "Reply" :  
                 if len(self.noteData)>1 :
                     self.Qt_noteContent.setText(u"Type a reply for all the selected notes") 
@@ -105,6 +130,8 @@ class noteContentLayout(QtGui.QWidget) :
 
             elif dataType == "Note":
                 self.Qt_noteContent.setText(u"Type a note")
+
+            layout.setContentsMargins(0,0,0,0)
 
             layout.addLayout(layoutContainer)
             layout.addWidget(self.Qt_noteContent)
@@ -325,13 +352,14 @@ class noteLayoutWidget(QtGui.QWidget) :
     SIGNAL_send_NoteContent = _signal(object)
 
     @decorateur_try_except
-    def __init__(self, data, comboFilterWidgetList = None, threadQueue = None, parent= None) : 
+    def __init__(self, data, comboFilterWidgetList = None, threadQueue = None, color = False, parent= None) : 
 
         super(noteLayoutWidget, self).__init__(parent ) 
         self.taskFilterWidget = None
         self.shotWidgetItemList = None
         self.my_versionWidgetCombo = None
         self.queue = None
+        self.myNoteBox = None
 
         self.data = data
 
@@ -369,8 +397,8 @@ class noteLayoutWidget(QtGui.QWidget) :
                 statusLabelText.setMaximumWidth(50)
                 titleGridLayout.addWidget(statusLabelText, 1,0)
         
-        elif  comboFilterWidgetList[0] :
 
+        elif  comboFilterWidgetList[0] :
 
             self.queue = threadQueue
 
@@ -392,25 +420,17 @@ class noteLayoutWidget(QtGui.QWidget) :
 
             idx +=1
             self.taskFilterWidget = comboFilterWidget2( *comboFilterWidgetList[1].retrieveDict(), showLabel = False )
-
             self.taskFilterWidget.widget.currentIndexChanged.connect(  self.getVersion)
             comboFilterWidgetList[1].SIGNAL_currentIndexesChanged.connect(self.taskFilterWidget.setMyCurrentFromIndexes)
-
             titleGridLayout.addWidget(QtGui.QLabel("Task"), idx,0)
             titleGridLayout.addWidget(self.taskFilterWidget , idx,1)
-
- 
 
 
             idx +=1
             self.typeFilterWidget = comboFilterWidget2(*comboFilterWidgetList[2].retrieveDict(),showLabel = False )
-
-
             comboFilterWidgetList[2].SIGNAL_currentIndexesChanged.connect(self.typeFilterWidget.setMyCurrentFromIndexes)
-
             titleGridLayout.addWidget(QtGui.QLabel("Type"), idx,0)
             titleGridLayout.addWidget(self.typeFilterWidget, idx,1)
-
 
 
 
@@ -420,11 +440,12 @@ class noteLayoutWidget(QtGui.QWidget) :
             titleGridLayout.addWidget(QtGui.QLabel("Status"), idx,0)
             titleGridLayout.addWidget(self.statusFilterWidget , idx,1)
 
+            """
             idx +=1
             self.titreLabel = QtGui.QLineEdit("")
             titleGridLayout.addWidget(titreLabelText  ,idx,0)
             titleGridLayout.addWidget(self.titreLabel ,idx,1)
-
+            """
 
             self.my_versionWidgetCombo = versionWidgetCombo()
             layout.addWidget( self.my_versionWidgetCombo )
@@ -436,14 +457,11 @@ class noteLayoutWidget(QtGui.QWidget) :
             layout.addWidget(line)
 
 
-
-
         else :
-            selectLabel = QtGui.QLabel("Select a Shot")
+            selectLabel = QtGui.QLabel("<font color:#F0F0F0><b> Select a Shot </b></font>")
             selectLabel.setAlignment(QtCore.Qt.AlignCenter) 
             font = selectLabel.font()
             font.setPointSize(10)
-            #font.setBold(True)
             selectLabel.setFont(font)
             layout.addWidget(selectLabel)
 
@@ -495,93 +513,140 @@ class noteLayoutWidget(QtGui.QWidget) :
             contentLayout.addWidget(my_noteContentLayout)
 
 
+        if self.data :
+            if not self.multiDisplay :
+               
+                tmpLayout = QtGui.QVBoxLayout()
+                tmpLayout.setContentsMargins(0,0,0,0)
 
-        layout.addLayout(titleGridLayout)
-        layout.addLayout(contentLayout)
+                #tmpLayout.addLayout(titleGridLayout )
+                tmpLayout.addLayout(contentLayout )
+                tmpLayout.addStretch()
+
+
+                w = QtGui.QWidget()
+                w.setLayout( tmpLayout )
+
+                myScrollNote = QtGui.QScrollArea()
+                myScrollNote.setWidget(w)
+                myScrollNote.setWidgetResizable(True)
+                
+
+                style = "QScrollArea {border: 0px none gray; border-radius: 0px;}"
+                myScrollNote.setStyleSheet(style)
+
+                self.myNoteBox    = QtGui.QGroupBox( str(self.data[0]["subject"])  )
+                self.myNoteBox.setCheckable(True)
+
+                self.myNoteBox.installEventFilter(self)
+
+                myNoteBox_layout = QtGui.QHBoxLayout()
+                myNoteBox_layout.setContentsMargins(5,10,0,0)
+                myNoteBox_layout.addWidget(myScrollNote)
+                self.myNoteBox.setLayout(myNoteBox_layout)
+                
+                borderColor = "#CCCCCC"
+                if self.data[0]["sg_status_list"] == "opn":
+                    borderColor = "#30A6E3"
+                elif self.data[0]["sg_status_list"] == "ip":
+                    borderColor = "#FFC31E"
+
+                style =  "QGroupBox  { border: 2px solid "+borderColor+";  border-radius: 5px; margin-top: 2ex; } "
+                style += "QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top center; padding: 0 3px; color: "+borderColor+" ;} "
+                style += "QGroupBox::indicator { width: 20px; height: 20px;} "
+                p =  getRessources("status_"+self.data[0]["sg_status_list"]+".png" ).replace("\\","/")
+                style += "QGroupBox::indicator:checked { image: url('"+ p +"'); }"
+                
+
+                self.myNoteBox.setStyleSheet(style)  
+                layout.addWidget(self.myNoteBox)
+
+        else :
+            layout.addLayout(titleGridLayout)
+            layout.addLayout(contentLayout)
 
 
         # Reply widget
         if self.data :
             if not self.multiDisplay :
                 
-
-                
-
+            
                 replyDataList = self.data[0]["queriedReplies"] #[0,1,2]
-                
                 myform = QtGui.QVBoxLayout()
-
-                myReplyBox = QtGui.QGroupBox('Replies')
+                myReplyBox = QtGui.QGroupBox()
                 
 
-                style = " QGroupBox  { background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 255, 255, 0%), stop: 1 rgba(0, 0, 0, 33%) ); border: 2px solid gray; border-radius: 5px; margin-top: 1ex; }"
-                style += " QGroupBox::title{ subcontrol-origin: margin; subcontrol-position: top center; padding: 0 3px; } "
+                style = " QGroupBox  { background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 255, 255, 0%), stop: 1 rgba(0, 0, 0, 33%) ); border: 0px none gray; border-radius: 0px}"
+
                 myReplyBox.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
                 myReplyBox.setStyleSheet(style)
                 myReplyBox.setLayout(myform)
                 
                 scroll = QtGui.QScrollArea()
+
                 scroll.setWidget(myReplyBox)
                 scroll.setWidgetResizable(True)
 
 
-                style = "QScrollArea {border-style: none}"
+                style = "QScrollArea {border: 0px none gray; border-radius: 0px;}"
                 scroll.setStyleSheet(style)
-                #scroll.setFixedHeight(400)            
+                moveScrollBarToBottom = lambda min, max : scroll.verticalScrollBar().setValue(max)
+                scroll.verticalScrollBar().rangeChanged.connect(moveScrollBarToBottom) 
+                
+
 
                 myEmptyNewReply = noteContentLayout("Reply", None,    self.data    , None)
                 myEmptyNewReply.SIGNAL_createReply.connect( self.replyNoteSlot )
 
-
-                myform.addWidget( myEmptyNewReply )
-                line = QtGui.QFrame()
-                line.setFrameShape(QtGui.QFrame.HLine)
-                line.setFrameShadow(QtGui.QFrame.Sunken)
-                line.setLineWidth(3)
-
-                myform.addWidget(line)
                 if replyDataList :
-
-                    for replyData in reversed( replyDataList ):
+                    for replyData in  replyDataList :
                         myform.addWidget(noteContentLayout("Reply", replyData, None))
                         line = QtGui.QFrame()
                         line.setFrameShape(QtGui.QFrame.HLine)
                         line.setFrameShadow(QtGui.QFrame.Sunken)
 
                         myform.addWidget(line)
-                layout.addWidget(scroll)
+                    
+                    
+
+                    replyBox = QtGui.QGroupBox(" Replies ")
+                    replyBox_layout = QtGui.QHBoxLayout()
+                    replyBox_layout.setContentsMargins(0,10,0,0)
+                    replyBox.setLayout(replyBox_layout)
+                    replyBox_layout.addWidget( scroll)
+
+                    style =  "QGroupBox  { border: 2px solid gray;  border-radius: 5px; margin-top: 2ex; } "
+                    style += "QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top center; padding: 0 3px; }"
+                    replyBox.setStyleSheet(style)
+
+                    layout.addWidget(replyBox)
+                    
+                layout.addWidget(myEmptyNewReply)
             
             else :
 
-                myform = QtGui.QVBoxLayout()
-
-                myReplyBox = QtGui.QGroupBox('Replies All')
-                myReplyBox.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
-
-                style = " QGroupBox  { background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 255, 255, 0%), stop: 1 rgba(0, 0, 0, 33%) ); border: 2px solid gray; border-radius: 5px; margin-top: 1ex; }"
-                style += " QGroupBox::title{ subcontrol-origin: margin; subcontrol-position: top center; padding: 0 3px; } "
-                myReplyBox.setStyleSheet(style)
-                myReplyBox.setLayout(myform)
-                
-                scroll = QtGui.QScrollArea()
-                scroll.setWidget(myReplyBox)
-                scroll.setWidgetResizable(True)
-                style = "QScrollArea {border-style: none}"
-                scroll.setStyleSheet(style)
-          
+         
 
                 myEmptyNewReply = noteContentLayout("Reply", None,  self.data   , None)
                 myEmptyNewReply.SIGNAL_createMultiReply.connect( self.multiReplyNoteSlot )
-
-                myform.addWidget( myEmptyNewReply )
-                line = QtGui.QFrame()
-                line.setFrameShape(QtGui.QFrame.HLine)
-                line.setFrameShadow(QtGui.QFrame.Sunken)
-                line.setLineWidth(3)
-
-                myform.addWidget(line)
                 
-                layout.addWidget(scroll)
+                layout.addWidget(myEmptyNewReply)
+
+    #def moveScrollBarToBottom(self, min, max):
+
+
+    def eventFilter(self, obj, event):
+ 
+        if obj == self.myNoteBox :
+            if event.type() in [QtCore.QEvent.MouseButtonDblClick, QtCore.QEvent.MouseButtonPress, QtCore.QEvent.MouseButtonRelease ] :
+                print "click"
+                return True
+            else :
+                return False
+        else :
+            return QtGui.QWidget.eventFilter(self, obj, event);
+     
+ 
 
 
     def setComboTasks(self, indexList ) :
@@ -596,9 +661,12 @@ class noteLayoutWidget(QtGui.QWidget) :
 
         # get ComboFilter data
         taskList = self.taskFilterWidget.getfilterList()
+
         if "NoTask" in taskList :  
             taskList = []
 
+        plog("In\n")
+        plog(str(taskList) + "\n")
         shot_SgData  = self.shotWidgetItemList[self.shotComboBox.currentIndex()]
         versionData = self.my_versionWidgetCombo.getCurrentIndexVersionData()
         typeNote  = self.typeFilterWidget.getfilterList()
@@ -635,6 +703,8 @@ class noteLayoutWidget(QtGui.QWidget) :
         noteDict.update( statusKey)
 
         # {'content': u'ma superbe note', 'note_links': [{'type': 'Shot', 'id': 2527}, {'type': 'Version', 'id': 17127}], 'sg_note_type': 'To-do', 'sg_status_list': 'opn'}
+        
+        plog(str(taskList) + "off\n")
 
         self.SIGNAL_send_NoteContent.emit([noteDict,  obj[0]["uploads"], shot_SgData, taskList ] )
 

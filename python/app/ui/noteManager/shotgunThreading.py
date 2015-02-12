@@ -221,8 +221,9 @@ class sg_query(QtCore.QThread) :
             
             if entityDict['image'] :
 
-                hash_object = hashlib.sha1(entityDict['image'])
+                hash_object = hashlib.sha1(entityDict['image'].split("?")[0])
                 hex_dig = hash_object.hexdigest()
+
                 thumbNameFile = os.path.join( self.tempPath, u"thumbnail_%s_%i_%s.jpg"%( entityDict['type'] , entityDict['id'], hex_dig ) )
 
                 if not os.path.isfile(thumbNameFile ):
@@ -518,6 +519,9 @@ class sg_query(QtCore.QThread) :
                  'content': replyNoteData[0]['content']
                  } 
         
+        if self.sg_userDict :
+            dReply.update({'user' : self.sg_userDict } )
+
         if  replyNoteData[0]['content']  != "" :       
 
             self.sg.create("Reply", dReply )
@@ -546,7 +550,9 @@ class sg_query(QtCore.QThread) :
         
         for replyNoteData in multiReplyNoteData[1] :
             if  multiReplyNoteData[0]['content']  != "" :
-                dReply= {'entity' : {'type':'Note','id':replyNoteData['id'] } , "content" : multiReplyNoteData[0]['content']  }           
+                dReply= {'entity' : {'type':'Note','id':replyNoteData['id'] } , "content" : multiReplyNoteData[0]['content']  } 
+                if self.sg_userDict :
+                    dReply.update({'user' : self.sg_userDict } )          
                 self.sg.create("Reply", dReply )
 
         

@@ -255,7 +255,7 @@ class comboFilterWidget2(QtGui.QWidget):
                     valuesList.extend(entries["values"])
             return valuesList
         else :
-            return self.entriesDictList[self.widget.currentIndex()]["values"]
+            return self.retrieveValueFromName( str(self.widget.currentText()) ) 
     
     @decorateur_try_except
     def retrieveIconFromValue(self, value ) :
@@ -517,27 +517,17 @@ class noteWidget(QtGui.QTreeWidgetItem) :
             self.setFont( 5, font );
 
 
-    def set_my_bacgroundColor(self ): 
+    def setMultiColor( self, foreColor, backColor ):
 
-
-        backColor = QtGui.QColor(0, 191, 255, 25)
-
-        if self.sgData["sg_status_list"] == "opn" : # rouge
-            #backColor = QtGui.QColor(255, 0, 0, 45)
-            backColor = QtGui.QColor(115,195,255, 100)
-        elif self.sgData["sg_status_list"] == "ip" : # orange
-            #backColor = QtGui.QColor(255, 191, 0, 55)
-            backColor = QtGui.QColor(223,210,122, 100)
-
-
-        elif self.sgData["sg_status_list"] == "clsd" : # vert
-            #backColor = QtGui.QColor(0, 255, 0, 45)
-            backColor = QtGui.QColor(95, 95, 95, 100)
-        
-        if str(self.text(11)) == "False" :
-            self.setTextColor(QtGui.QColor(250,250,210), bold = True)
-        else :
-            self.setTextColor(QtGui.QColor(210,210,210))
+        self.setForeground(0, foreColor)
+        self.setForeground(1, foreColor)
+        self.setForeground(2, foreColor)
+        self.setBackground(3, foreColor)
+        self.setForeground(4, foreColor)
+        self.setForeground(5, foreColor)
+        self.setForeground(6, foreColor)
+        self.setForeground(7, foreColor)
+        self.setForeground(8, foreColor)
 
 
         self.setBackground(0, backColor)
@@ -549,6 +539,48 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         self.setBackground(6, backColor)
         self.setBackground(7, backColor)
         self.setBackground(8, backColor)
+
+
+    def set_my_bacgroundColor(self ): 
+
+
+        backColor = QtGui.QColor(0, 191, 255, 25)
+        foreColor = QtGui.QBrush( QtGui.QColor(210,210,210) )
+
+        if self.sgData["sg_status_list"] == "opn" : # bleur
+            backColor = QtGui.QColor(115,195,255, 100)
+            self.setMultiColor(foreColor, backColor )
+
+            if str(self.text(11)) == "False" :
+                self.setTextColor(QtGui.QColor(250,250,210), bold = True)
+            else :
+                self.setTextColor(QtGui.QColor(210,210,210))
+
+        elif self.sgData["sg_status_list"] == "ip" : # orange FFA500
+            backColor = QtGui.QColor(250,220,122, 160)
+            foreColor = QtGui.QBrush( QtGui.QColor(60,60,30) )
+            self.setMultiColor(foreColor, backColor )
+
+            if str(self.text(11)) == "False" :
+                self.setTextColor(QtGui.QColor(60,60,30), bold = True)
+            else :
+                self.setTextColor(QtGui.QColor(40,40,00))
+
+
+        elif self.sgData["sg_status_list"] == "clsd" : # vert
+            backColor = QtGui.QColor(95, 95, 95, 100)
+            foreColor = QtGui.QBrush( QtGui.QColor(150,150,150) )
+            self.setMultiColor(foreColor, backColor )
+
+            if str(self.text(11)) == "False" :
+                self.setTextColor(QtGui.QColor(210,210,210))
+            else :
+                self.setTextColor(QtGui.QColor(150,150,150))
+        
+
+
+
+
 
     #@decorateur_try_except
     def updateData(self, dataDict ):

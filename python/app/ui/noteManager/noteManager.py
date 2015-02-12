@@ -49,6 +49,15 @@ import launchApp_widget
 from launchApp_widget import *
 
 
+class NoRectDelegate(QtGui.QItemDelegate): 
+    def __init__(self):
+        super(NoRectDelegate, self).__init__()
+                      
+    def drawFocus (self, painter,option,rect):
+        option.state &= ~QtGui.QStyle.State_HasFocus
+        QtGui.QItemDelegate.drawFocus (self, painter,option,rect)
+
+
 class myQTree( QtGui.QTreeWidget ):
     pixmap = None
 
@@ -64,7 +73,7 @@ class myQTree( QtGui.QTreeWidget ):
 
     def __init__(self, task_entriesDictList ):
         QtGui.QTreeWidget.__init__(self)
-        self.setFocusPolicy(QtCore.Qt.NoFocus)
+        #self.setFocusPolicy(QtCore.Qt.NoFocus)
         self.task_entriesDictList = task_entriesDictList
 
         self.pixmap = QtGui.QPixmap( getRessources("note_folded.png") )
@@ -73,11 +82,11 @@ class myQTree( QtGui.QTreeWidget ):
 
         self.itemDoubleClicked.connect(self.editItem)
         self.itemClicked.connect( self.close_editItem )
-
+        self.setStyleSheet("myQTree{ outline: 0;}")
+        #self.grabKeyboard()
         self.lastItem_edited = None
 
-        
-        
+        self.setItemDelegate(NoRectDelegate())
 
     def columHasMoved(self, i ,j ,k, save = True  ):
         if save == False :
@@ -312,10 +321,12 @@ class myQueue( Queue.PriorityQueue ) :
 
 class Example(QtGui.QWidget):
     appLauncherDict = { 
+                        "layout" : { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" } },
                         "Anim"  :  { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" } } ,
                         "Compo" :  { "tk-multi-launchnuke"  : { "template" : "nuke_shot_work" ,  "icon" : "NukeApp.png" },
                                      "tk-multi-launchnukeX" : { "template" : "nuke_shot_work" ,  "icon" : "NukeXApp.png" }
-                                   }
+                                   },
+                        "lighting" : { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" } }
                       }
 
     def __init__(self ):

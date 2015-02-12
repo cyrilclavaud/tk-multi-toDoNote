@@ -78,14 +78,18 @@ class versionWidgetCombo(QtGui.QWidget) :
         self.layout = QtGui.QHBoxLayout()
         self.layout.setContentsMargins(0,0,0,0)
 
-        titleLabel = QtGui.QLabel("Link to version")
+        titleLabel = QtGui.QLabel("Create Note")
+        #titleLabel.setStyleSheet("QLabel { background-color : red; color : blue; }");
+        font = QtGui.QFont("" , 10 , QtGui.QFont.Bold )
+        titleLabel.setFont(font)
+
         titleLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.masterLayout.addWidget(titleLabel)
         self.masterLayout.addLayout(self.layout)
 
 
         self.pic= loadingWidget() 
-        self.pic.setMaximumWidth(50)
+        #self.pic.setMaximumWidth(50)
 
         
 
@@ -93,7 +97,7 @@ class versionWidgetCombo(QtGui.QWidget) :
         infoLayout.setAlignment(QtCore.Qt.AlignTop )
         self.layout.addLayout( infoLayout)
         self.layout.addStretch()
-        self.layout.addWidget(self.pic,QtCore.Qt.AlignTop)
+        self.layout.addWidget(self.pic,QtCore.Qt.AlignLeft)
 
        
         self.versionQtCombo = QtGui.QComboBox( )
@@ -101,7 +105,13 @@ class versionWidgetCombo(QtGui.QWidget) :
         self.userQt = QtGui.QLabel("")
         self.dateQt = QtGui.QLabel("" )
 
-        infoLayout.addWidget( self.versionQtCombo ) 
+        comboLayout = QtGui.QHBoxLayout()
+        comboLayout.setContentsMargins(0,0,0,0)
+        comboLayout.addWidget( QtGui.QLabel("Link to version : "))
+        comboLayout.addWidget( self.versionQtCombo,QtCore.Qt.AlignLeft )
+
+        infoLayout.addLayout( comboLayout )
+
         infoLayout.addWidget( self.nameQt )    
         infoLayout.addWidget( self.userQt ) 
         infoLayout.addWidget( self.dateQt )   
@@ -123,14 +133,14 @@ class versionWidgetCombo(QtGui.QWidget) :
 
 
         if idx == 0 :
-            self.nameQt.setText("name : None" )
-            self.userQt.setText("user : None" )
-            self.dateQt.setText("created : None" )
+            self.nameQt.setText("Name : None" )
+            self.userQt.setText("User : None" )
+            self.dateQt.setText("Created : None" )
 
             self.pic.setParent(None)
-            self.pic = PicButton( getRessources( "empty.png"),50,50, overImageName = None)
-            self.pic.setMaximumWidth(50)
-            self.layout.addWidget(self.pic,QtCore.Qt.AlignTop)
+            self.pic = PicButton( getRessources( "empty.png"),200,200, overImageName = None)
+            #self.pic.setMaximumWidth(2000)
+            self.layout.addWidget(self.pic,QtCore.Qt.AlignLeft )
         else :
             versionData = self.versionDatas[idx-1]
 
@@ -146,18 +156,15 @@ class versionWidgetCombo(QtGui.QWidget) :
             if splits :
                 versionString = splits[-1]
             
-            self.nameQt.setText("name : %s"%versionData["code"].replace(versionString, "<b>%s</b>"%versionString) )    
-            self.userQt.setText("%s : <b>%s</b"%("user"  ,  versionDataName ) )  
-            self.dateQt.setText("%s : <b>%s</b"%("created", versionData["created_at"]) )   
+            self.nameQt.setText("Name : %s"%versionData["code"].replace(versionString, "<b>%s</b>"%versionString) )    
+            self.userQt.setText("%s : <b>%s</b"%("User"  ,  versionDataName ) )  
+            self.dateQt.setText("%s : <b>%s</b"%("Created", versionData["created_at"]) )   
             
             self.pic.setParent(None)
             self.pic = PicButton( versionData["downloadedImage"] ,200,200, overImageName = "play.png",  doStart=True)
-            if self.pic.isNullPixmap :
-                self.pic.setMaximumWidth(50)
-            else :
-                self.pic.setMaximumWidth(200)
+            
 
-            self.layout.addWidget(self.pic,QtCore.Qt.AlignTop)
+            self.layout.addWidget(self.pic,QtCore.Qt.AlignLeft )
             self.pathToMovie = versionData["sg_path_to_movie"]
             self.pic.SIGNAL_imageClicked.connect(self.play_pathToMovie)
 
@@ -167,7 +174,7 @@ class versionWidgetCombo(QtGui.QWidget) :
         
         if self.pathToMovie :
             convertPath =   OS_convertPath( self.pathToMovie )
-            os.system("start %s"%convertPath )
+            osSystem( convertPath )
 
     @decorateur_try_except
     def setOnLoading(self):
@@ -175,7 +182,7 @@ class versionWidgetCombo(QtGui.QWidget) :
             self.pic.setParent(None)
         self.pic = loadingWidget()
         self.pic.setMaximumWidth(50)
-        self.layout.addWidget(self.pic,QtCore.Qt.AlignTop)
+        self.layout.addWidget(self.pic,QtCore.Qt.AlignLeft )
     
     @decorateur_try_except
     def updateWidget(self, datas ):
@@ -190,6 +197,7 @@ class versionWidgetCombo(QtGui.QWidget) :
 
         self.versionQtCombo.addItem(str("None") ) 
         versionData = None
+        idx = 0
         for versionData in self.versionDatas :
 
             versionDataName = versionData["user"]
@@ -202,7 +210,11 @@ class versionWidgetCombo(QtGui.QWidget) :
             if splits :
                 versionString = splits[-1]
 
-            self.versionQtCombo.addItem(str(versionString) ) 
+            if idx == 0 :
+                self.versionQtCombo.addItem(str(versionString) + " ( Last )" )  
+            else :
+                self.versionQtCombo.addItem(str(versionString) )
+            idx += 1
 
         if len(self.versionDatas) :
             self.versionQtCombo.setEnabled(True)
@@ -250,6 +262,7 @@ class versionWidget(QtGui.QWidget) :
             titleLabel = QtGui.QLabel(versionData["Title"] )
             titleLabel.setAlignment(QtCore.Qt.AlignCenter)
             testLayout.addWidget(titleLabel)
+        pic.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(pic)
 
 
@@ -282,7 +295,7 @@ class versionWidget(QtGui.QWidget) :
     def play_pathToMovie(self, file):
         
         convertPath =   OS_convertPath( self.pathToMovie )
-        os.system("start %s"%convertPath )
+        osSystem( convertPath )
 
 
 class PicButton(QtGui.QLabel):
@@ -302,15 +315,19 @@ class PicButton(QtGui.QLabel):
         self.resultPix = None
         self.x = x 
         self.y = y
+        self.setMaximumWidth(x)
 
         self.fileOnDisk =  imageFileName
         self.attachmentPixmap = QtGui.QPixmap(imageFileName)
         if self.attachmentPixmap.isNull() :
             if doStart :
-                self.attachmentPixmap = QtGui.QPixmap(getRessources("no_thumbnail.png") ).scaled ( 45,45, QtCore.Qt.KeepAspectRatio)
+                self.attachmentPixmap = QtGui.QPixmap(getRessources("version.png") ).scaled ( 100,100, QtCore.Qt.KeepAspectRatio)
+                self.setMaximumWidth(100)
                 self.setPixmap(self.attachmentPixmap)
-                self.isNullPixmap = True
-                self.setAlignment(QtCore.Qt.AlignTop)
+                self.isNullPixmap = False
+                self.do_on_hover  = True 
+                self.createOverlayPixmap(alpha = 0)
+                self.setAlignment(QtCore.Qt.AlignLeft)
        
             else :
                 self.attachmentPixmap = QtGui.QPixmap(getRessources("fileError.png") )
@@ -345,7 +362,7 @@ class PicButton(QtGui.QLabel):
 
 
     @decorateur_try_except
-    def createOverlayPixmap(self ):
+    def createOverlayPixmap(self , alpha = 45):
 
 
         px = float(self.attachmentPixmap.width())/3.0
@@ -361,7 +378,7 @@ class PicButton(QtGui.QLabel):
 
         painter = QtGui.QPainter(self.resultPix) 
         painter.drawPixmap(0,0, self.attachmentPixmap)
-        painter.fillRect(0,0,self.attachmentPixmap.width() ,self.attachmentPixmap.height(), QtGui.QColor(0,0,0,45))
+        painter.fillRect(0,0,self.attachmentPixmap.width() ,self.attachmentPixmap.height(), QtGui.QColor(0,0,0,alpha))
         painter.drawPixmap(px, py, overPix)
         del painter
 
