@@ -57,9 +57,9 @@ class sg_query(QtCore.QThread) :
     th_id = 0
 
     @decorateur_try_except
-    def __init__(self, app ):
+    def __init__(self, app, parent = None ):
 
-        super(sg_query, self).__init__()
+        super(sg_query, self).__init__( parent )
 
 
         self.sg_userDict = None

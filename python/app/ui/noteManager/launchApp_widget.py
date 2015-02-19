@@ -114,11 +114,11 @@ class LaunchApp_widget( QtGui.QWidget ):
         s.drawPrimitive(QtGui.QStyle.PE_Widget, opt, p, self)
 
     @decorateur_try_except
-    def __init__(self, new_appLauncherDict, shotId, taskName, entityCode,  empty = False  ) :
+    def __init__(self, new_appLauncherDict, shotId, taskName, entityCode,  empty = False, parent = None  ) :
 
         
 
-        QtGui.QWidget.__init__(self)
+        QtGui.QWidget.__init__(self, parent)
         self.setAutoFillBackground(True)
         
         #"background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #9dd53a, stop: .5 #a1d54f, stop: .51 #80c217, stop: 1 #7cbc0a);"

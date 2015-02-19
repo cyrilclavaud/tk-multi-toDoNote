@@ -440,7 +440,7 @@ class lineEditFilterWidget(QtGui.QWidget) :
 
 class noteWidget(QtGui.QTreeWidgetItem) :
 
-    #@decorateur_try_except
+   #@decorateur_try_except
     def __init__(self, parent, sgData, filterWidget, typeFilterWidget,  userNameFilterWidget, contentFilterWidget, entityAssignedFilterWidget  ):
 
         super(noteWidget, self).__init__(parent )
@@ -478,7 +478,9 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         self.textBox = False
         self.editing_text = None
 
-    #@decorateur_try_except
+
+
+
     def setEditableMode(self, editable) :
 
         if editable :
@@ -506,6 +508,114 @@ class noteWidget(QtGui.QTreeWidgetItem) :
                 else :
                     print "no change"
 
+
+
+
+    #@decorateur_try_except
+    def __init_____working__but___wordWraping(self, parent, sgData, filterWidget, typeFilterWidget,  userNameFilterWidget, contentFilterWidget, entityAssignedFilterWidget  ):
+
+        super(noteWidget, self).__init__(parent )
+
+
+
+
+        self.sgData = sgData
+        self.filterWidget = filterWidget
+        self.userNameFilterWidget = userNameFilterWidget
+        self.contentFilterWidget = contentFilterWidget
+        self.entityAssignedFilterWidget = entityAssignedFilterWidget
+
+        content = "None"
+        if sgData["content"] :
+            content = unicode(sgData["content"] , "utf-8")
+
+        sg_noteType = "NoType"
+        if sgData["sg_note_type"] :
+            sg_noteType = str(sgData["sg_note_type"])
+
+        self.setText(10, "note_%i"%sgData["id"] )
+        #self.setText(0, content )
+
+        self.myContentLabel = QtGui.QLabel(sgData["content"], parent = self.treeWidget())
+        self.myContentLabel.setWordWrap(True)
+
+        self.treeWidget().setItemWidget(self, 0, self.myContentLabel)
+
+
+        self.setText(2, sg_noteType )
+
+        self.setIcon(2, QtGui.QIcon( QtGui.QPixmap(getRessources(typeFilterWidget.retrieveIconFromValue( sg_noteType ))).scaled ( 16, 16, QtCore.Qt.KeepAspectRatio ) ) )
+        self.setText(3, str(sgData["created_at"].strftime("%Y-%m-%d %H:%M"))  )
+        self.setText(4, str(sgData["user"]["name"] )  )
+        self.setText(6, str(sgData["shotCode"] )  )
+        self.set_my_bacgroundColor()
+        self.do_hidding()
+
+        self.setExpanded(False)
+
+        self.textBox = False
+        self.editing_text = None
+
+    #@decorateur_try_except
+
+
+    def setEditableMode___working__but___wordWraping(self, editable) :
+        self.setHidden(True)
+
+        
+        if editable :
+            print "edit"
+            self.editing_text = self.myContentLabel.text()
+            self.textBox = QtGui.QTextEdit()
+            self.textBox.setPlainText(self.myContentLabel.text() )
+            self.setSizeHint(0, self.textBox.sizeHint() )
+
+
+            self.treeWidget().removeItemWidget( self, 0 )
+            self.treeWidget().setItemWidget( self, 0 , self.textBox )
+            
+
+
+            #self.setText(0, "")
+        
+        else :
+            print "close"
+
+            if self.textBox :
+                text = self.textBox.toPlainText()
+                self.treeWidget().removeItemWidget( self, 0 )
+                
+                #self.myContentLabel.setText(  text )
+
+                if self.editing_text != text :
+                    
+                    self.myContentLabel =  QtGui.QLabel(text, parent = self.treeWidget())
+                    self.setSizeHint(0, self.myContentLabel.sizeHint() )
+                    
+
+                    self.treeWidget().setItemWidget( self, 0 , self.myContentLabel )
+
+                    """
+                    print "change"
+                    if not isinstance(text, unicode):
+                        text =  unicode ( text.toUtf8(), "utf-8" )
+
+                    self.treeWidget().SIGNAL_updateNoteContent.emit( [text, self.sgData['id'] ] )
+                    """
+                    
+                else :
+                    self.myContentLabel =  QtGui.QLabel(self.sgData["content"], parent = self.treeWidget())
+                    self.setSizeHint(0, self.myContentLabel.sizeHint() )
+
+
+
+                    self.treeWidget().setItemWidget( self, 0 , self.myContentLabel )
+
+                    print "no change"
+       
+        self.setHidden(False)
+        
+        #self.treeWidget().SIGNAL_manualEdit.emit(self)
 
     
     def setTextColor(self, color, bold = False):

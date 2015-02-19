@@ -29,19 +29,6 @@ import imageScribble
 import imagePicker
 
 
-class GrowingTextEdit(QtGui.QTextEdit):
-
-    def __init__(self, *args, **kwargs):
-        super(GrowingTextEdit, self).__init__(*args, **kwargs)  
-        self.document().contentsChanged.connect(self.sizeChange)
-
-        self.heightMin = 0
-        self.heightMax = 65000
-
-    def sizeChange(self):
-        docHeight = self.document().size().height()
-        if self.heightMin <= docHeight <= self.heightMax:
-            self.setMinimumHeight(docHeight)
 
 class noteContentLayout(QtGui.QWidget) :
     SIGNAL_createReply      = _signal(object)
@@ -61,8 +48,8 @@ class noteContentLayout(QtGui.QWidget) :
         layoutContainer = QtGui.QHBoxLayout()
         titleGridLayout = QtGui.QGridLayout()
         layoutContainer.addLayout(titleGridLayout)
-        titleGridLayout.setColumnStretch(1,10)
-        titleGridLayout.setColumnStretch(2,40)
+        
+        #titleGridLayout.setColumnStretch(2,40)
 
         # author
         authorTxt = "unknown" 
@@ -79,20 +66,23 @@ class noteContentLayout(QtGui.QWidget) :
                 self.Qt_noteContent.setPlainText(self.data["content"] )
 
             if dataType == "Reply" :
-
+                titleGridLayout.setColumnStretch(0,0)
+                titleGridLayout.setColumnStretch(1,1)   
                 
                 authorHtmlTxt = "<font size=2 color=#BBBBBB>Author : "+self.data["user"]['name']+"</font><br>"
                 dateHtmlTxt   = "<font size=2 color=#BBBBBB>Date : "+self.data["created_at"].strftime('%Y-%m-%d %H:%M:%S')+"</font>"
-                labelText = QtGui.QLabel(authorHtmlTxt+dateHtmlTxt)                
+                labelText = QtGui.QLabel(authorHtmlTxt+dateHtmlTxt)   
+                #labelText.setWordWrap(True)             
                 
                 contentLabel = QtGui.QLabel(self.data["content"])
-                contentLabel.setAlignment(QtCore.Qt.AlignTop)
+                contentLabel.setAlignment(QtCore.Qt.AlignLeft)
                 contentLabel.setStyleSheet("QLabel { color : #F0F0F0 }")
                 contentLabel.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-                
+                contentLabel.setWordWrap(True)  
+
                 titleGridLayout.setHorizontalSpacing(20)
                 titleGridLayout.addWidget(labelText, 0,0, QtCore.Qt.AlignTop )
-                titleGridLayout.addWidget( contentLabel, 0, 1 )
+                titleGridLayout.addWidget( contentLabel, 0, 1 , QtCore.Qt.AlignLeft )
                 layout.addLayout(layoutContainer)
                 layout.addLayout(self.attachmentLayout)
                 titleGridLayout.setContentsMargins(0,0,0,0)
@@ -102,12 +92,15 @@ class noteContentLayout(QtGui.QWidget) :
                 authorHtmlTxt = "<font color=#BBBBBB>Author : "+ self.data["user"]['name'] + "</font><br>"
                 dateHtmlTxt = "<font color=#BBBBBB>Date : <b>"+self.data["created_at"].strftime('%Y-%m-%d %H:%M:%S')+"</font></b><br>"
                 labelText = QtGui.QLabel(authorHtmlTxt+dateHtmlTxt)
+                #labelText.setWordWrap(True)
+ 
                 titleGridLayout.addWidget(labelText, 0,0, QtCore.Qt.AlignTop)
 
                 contentLabel = QtGui.QLabel(self.data["content"])
                 contentLabel.setAlignment(QtCore.Qt.AlignTop)
 
                 contentLabel.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+                contentLabel.setWordWrap(True)  
 
                 layout.addLayout(layoutContainer)
                 layout.addWidget(contentLabel)
@@ -440,9 +433,10 @@ class noteLayoutWidget(QtGui.QWidget) :
             titleGridLayout.addWidget(QtGui.QLabel("Status"), idx,0)
             titleGridLayout.addWidget(self.statusFilterWidget , idx,1)
 
+            self.titreLabel = QtGui.QLineEdit("")
+
             """
             idx +=1
-            self.titreLabel = QtGui.QLineEdit("")
             titleGridLayout.addWidget(titreLabelText  ,idx,0)
             titleGridLayout.addWidget(self.titreLabel ,idx,1)
             """
@@ -528,6 +522,7 @@ class noteLayoutWidget(QtGui.QWidget) :
                 w.setLayout( tmpLayout )
 
                 myScrollNote = QtGui.QScrollArea()
+                myScrollNote.setHorizontalScrollBarPolicy ( QtCore.Qt.ScrollBarAlwaysOff )
                 myScrollNote.setWidget(w)
                 myScrollNote.setWidgetResizable(True)
                 
@@ -590,6 +585,7 @@ class noteLayoutWidget(QtGui.QWidget) :
 
                 style = "QScrollArea {border: 0px none gray; border-radius: 0px;}"
                 scroll.setStyleSheet(style)
+                scroll.setHorizontalScrollBarPolicy ( QtCore.Qt.ScrollBarAlwaysOff )
                 moveScrollBarToBottom = lambda min, max : scroll.verticalScrollBar().setValue(max)
                 scroll.verticalScrollBar().rangeChanged.connect(moveScrollBarToBottom) 
                 

@@ -26,8 +26,8 @@ class ScreenshotThread(QtCore.QThread):
         This helps avoid the os thinking the application has hung for 
         certain applications (e.g. Softimage on Windows)
         """
-        def __init__(self, path):
-            QtCore.QThread.__init__(self)
+        def __init__(self, path, parent = None):
+            QtCore.QThread.__init__(self, parent)
             self._path = path
             self._error = None
             

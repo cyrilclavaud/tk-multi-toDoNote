@@ -35,12 +35,14 @@ except :
 
 def decorateur_try_except(fonction_a_decorer):
     
+
     def wrapper_fonction_a_decorer( *args, **kwargs ):
 
         try :
             return fonction_a_decorer( *args, **kwargs )
 
         except :
+            print str(traceback.format_exc())
             perr( "########  %s ######\n%s\n\n"%(fonction_a_decorer.__name__,str(traceback.format_exc())) )
 
     return wrapper_fonction_a_decorer

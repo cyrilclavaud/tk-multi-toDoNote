@@ -50,8 +50,8 @@ from launchApp_widget import *
 
 
 class NoRectDelegate(QtGui.QItemDelegate): 
-    def __init__(self):
-        super(NoRectDelegate, self).__init__()
+    def __init__(self , parent = None):
+        super(NoRectDelegate, self).__init__( parent )
                       
     def drawFocus (self, painter,option,rect):
         option.state &= ~QtGui.QStyle.State_HasFocus
@@ -63,6 +63,7 @@ class myQTree( QtGui.QTreeWidget ):
 
     SIGNAL_updateNoteContent = _signal(object)
 
+
     SIGNAL_selectShot = _signal(object)
     SIGNAL_setNoteStatus = _signal(object)
     SIGNAL_setNoteType = _signal(object)
@@ -71,8 +72,8 @@ class myQTree( QtGui.QTreeWidget ):
     SIGNAL_linkToLastVersion = _signal(object)
 
 
-    def __init__(self, task_entriesDictList ):
-        QtGui.QTreeWidget.__init__(self)
+    def __init__(self, task_entriesDictList , parent = None ):
+        QtGui.QTreeWidget.__init__(self, parent)
         #self.setFocusPolicy(QtCore.Qt.NoFocus)
         self.task_entriesDictList = task_entriesDictList
 
@@ -620,7 +621,12 @@ class Example(QtGui.QWidget):
 
         leftLayout = QtGui.QVBoxLayout()
         leftLayout.setContentsMargins(2,2,2,2)
+
+
         midLayout  = QtGui.QVBoxLayout()
+
+        self.test = midLayout        
+
         midLayout.setContentsMargins(2,2,2,2)
         self.rightLayout = QtGui.QHBoxLayout()
         self.rightLayout.setContentsMargins(2,2,2,2)
@@ -656,7 +662,7 @@ class Example(QtGui.QWidget):
             
         
         header = self.myTree2.header()
-        header.setResizeMode(0, QtGui.QHeaderView.ResizeToContents)
+        header.setResizeMode(0, QtGui.QHeaderView.Interactive)
         header.setResizeMode(1, QtGui.QHeaderView.ResizeToContents)
         header.setResizeMode(2, QtGui.QHeaderView.ResizeToContents)
         header.setResizeMode(3, QtGui.QHeaderView.ResizeToContents)
@@ -670,9 +676,10 @@ class Example(QtGui.QWidget):
 
         header.swapSections(6,7)
 
+        
         for column in range( self.myTree2.columnCount() ):
             self.myTree2.resizeColumnToContents( column )
-
+        
 
         leftLayout.addWidget(self.myTree)
         midLayout.addWidget(self.myTree2)
@@ -792,8 +799,10 @@ class Example(QtGui.QWidget):
         self.myTree2.SIGNAL_setNoteTask.connect(self.setNoteTask)
         self.myTree2.SIGNAL_linkToLastVersion.connect(self.linkToLastVersion)
 
+
         self.myTree2.itemSelectionChanged.connect(self.noteTreeClicked )
         self.myTree2.header().sectionMoved.connect(self.myTree2.columHasMoved)
+        self.myTree2.header().sectionResized.connect(self.myTree2.columHasMoved)
 
         self.groupByTypeBox.stateChanged.connect(self.refreh_myTree2)
 
@@ -808,9 +817,12 @@ class Example(QtGui.QWidget):
 
         self.myTree2.columHasMoved(0,0,0, False)
 
+
+        header.setResizeMode(0, QtGui.QHeaderView.Interactive)
+
         self.show()
 
-  
+
     def resizeFilterLayout(self, pos, idx):
 
         if idx == 1 :
