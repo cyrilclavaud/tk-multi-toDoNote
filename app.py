@@ -38,5 +38,5 @@ class StgkStarterApp(Application):
         menu_callback = lambda : app_payload.dialog.show_dialog(self)
 
         # now register the command with the engine
-        self.engine.register_command("To Do Note App...", menu_callback)
+        self.engine.register_command("To_Do_Note_App", menu_callback)
 

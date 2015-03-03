@@ -14,6 +14,7 @@ except :
     outFileName = "cute"
 
 
+import copy
 
 import utils
 from utils import *
@@ -36,8 +37,13 @@ class noteContentLayout(QtGui.QWidget) :
     SIGNAL_send_NoteContent = _signal(object)
 
     @decorateur_try_except
-    def __init__(self, dataType , data , noteData = None, parent= None) :
+    def __init__(self, dataType , data , noteData = None, parent = None) :
         super(noteContentLayout, self).__init__(parent ) 
+
+
+
+
+
         self.data = data
         self.noteData = noteData # is a list
 
@@ -55,7 +61,7 @@ class noteContentLayout(QtGui.QWidget) :
         authorTxt = "unknown" 
 
         self.attachmentLayout = QtGui.QHBoxLayout()
-        self.Qt_noteContent = QtGui.QTextEdit()
+        self.Qt_noteContent = my_textEdit( "", editable = bool(self.data) , parent = self) # QtGui.QTextEdit( )
 
 
         if self.data :
@@ -71,18 +77,12 @@ class noteContentLayout(QtGui.QWidget) :
                 
                 authorHtmlTxt = "<font size=2 color=#BBBBBB>Author : "+self.data["user"]['name']+"</font><br>"
                 dateHtmlTxt   = "<font size=2 color=#BBBBBB>Date : "+self.data["created_at"].strftime('%Y-%m-%d %H:%M:%S')+"</font>"
-                labelText = QtGui.QLabel(authorHtmlTxt+dateHtmlTxt)   
-                #labelText.setWordWrap(True)             
-                
-                contentLabel = QtGui.QLabel(self.data["content"])
-                contentLabel.setAlignment(QtCore.Qt.AlignLeft)
-                contentLabel.setStyleSheet("QLabel { color : #F0F0F0 }")
-                contentLabel.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-                contentLabel.setWordWrap(True)  
-
+                labelText = QtGui.QLabel(authorHtmlTxt+dateHtmlTxt , parent = self )   
+            
+               
                 titleGridLayout.setHorizontalSpacing(20)
                 titleGridLayout.addWidget(labelText, 0,0, QtCore.Qt.AlignTop )
-                titleGridLayout.addWidget( contentLabel, 0, 1 , QtCore.Qt.AlignLeft )
+                titleGridLayout.addWidget( self.Qt_noteContent, 0, 1  )
                 layout.addLayout(layoutContainer)
                 layout.addLayout(self.attachmentLayout)
                 titleGridLayout.setContentsMargins(0,0,0,0)
@@ -91,22 +91,16 @@ class noteContentLayout(QtGui.QWidget) :
             else :
                 authorHtmlTxt = "<font color=#BBBBBB>Author : "+ self.data["user"]['name'] + "</font><br>"
                 dateHtmlTxt = "<font color=#BBBBBB>Date : <b>"+self.data["created_at"].strftime('%Y-%m-%d %H:%M:%S')+"</font></b><br>"
-                labelText = QtGui.QLabel(authorHtmlTxt+dateHtmlTxt)
-                #labelText.setWordWrap(True)
+                labelText = QtGui.QLabel(authorHtmlTxt+dateHtmlTxt , parent = self )
+
  
                 titleGridLayout.addWidget(labelText, 0,0, QtCore.Qt.AlignTop)
 
-                contentLabel = QtGui.QLabel(self.data["content"])
-                contentLabel.setAlignment(QtCore.Qt.AlignTop)
-
-                contentLabel.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-                contentLabel.setWordWrap(True)  
-
                 layout.addLayout(layoutContainer)
-                layout.addWidget(contentLabel)
+                layout.addWidget(self.Qt_noteContent)
                 layout.addLayout(self.attachmentLayout)
 
-                contentLabel.setStyleSheet("QLabel { color : #F0F0F0 ; }")
+                self.Qt_noteContent.setStyleSheet("QTextEdit { color : #F0F0F0 ; }")
                 titleGridLayout.setContentsMargins(0,0,0,0)
                 layout.setContentsMargins(0,0,0,0)
 
@@ -134,20 +128,20 @@ class noteContentLayout(QtGui.QWidget) :
 
         if self.data :
             for attachementFile in self.data["queriedAttachement"] :
-                labelImage = PicButton(attachementFile["fileOnDisk"], overImageName = "magnifier.png")
+                labelImage = PicButton(attachementFile["fileOnDisk"], overImageName = "magnifier.png", parent = self)
 
                 labelImage.SIGNAL_imageClicked.connect( self.showImageDisplay )
 
                 self.attachmentLayout.addWidget(labelImage)
         else :
-            attachButton = QtGui.QPushButton()
+            attachButton = QtGui.QPushButton(parent = self)
             attachmentPixmap = QtGui.QPixmap(getRessources("note_attachment.png"))
             attachementScaled = attachmentPixmap.scaled ( 32, 32, QtCore.Qt.KeepAspectRatio)
             attachButton.setIcon(QtGui.QIcon(attachementScaled))
             attachButton.clicked.connect(self.addAttachment)
 
 
-            screenShotButton = QtGui.QPushButton()
+            screenShotButton = QtGui.QPushButton(parent = self)
             attachmentPixmap = QtGui.QPixmap(getRessources("note_screenShot.png"))
             attachementScaled = attachmentPixmap.scaled ( 32, 32, QtCore.Qt.KeepAspectRatio)
             screenShotButton.setIcon(QtGui.QIcon(attachementScaled))
@@ -158,10 +152,10 @@ class noteContentLayout(QtGui.QWidget) :
 
             replyButton = None
             if dataType == "Reply" :   
-                replyButton = QtGui.QPushButton("Reply")
+                replyButton = QtGui.QPushButton("Reply", parent = self)
                 replyButton.clicked.connect(self.replyNoteSlot)
 
-                self.statusLabel = QtGui.QComboBox()
+                self.statusLabel = QtGui.QComboBox( parent = self )
                 self.statusLabel.addItem(QtGui.QIcon(getRessources("status_opn.png")), "Open")
                 self.statusLabel.addItem(QtGui.QIcon(getRessources("status_clsd.png")), "closed")
                 self.statusLabel.addItem(QtGui.QIcon(getRessources("status_ip.png")), "In progress")
@@ -178,13 +172,19 @@ class noteContentLayout(QtGui.QWidget) :
                 self.statusLabel.currentIndexChanged.connect(self.updateNodeDataStatus )
 
                 layout.addWidget(self.statusLabel)
-
+                layout.addWidget(replyButton)
 
             elif dataType == "Note":
-                replyButton = QtGui.QPushButton("Create Note")
+                #self.linkFilterWidget = comboFilterWidget2()
+
+                replyButton = QtGui.QPushButton("Create Note",  parent = self )
                 replyButton.clicked.connect(self.createNoteSlot)
-            
-            layout.addWidget(replyButton)
+                
+
+                layout.addWidget(replyButton)
+
+                
+
 
         self.attachmentLayout.addStretch()
 
@@ -375,28 +375,21 @@ class noteLayoutWidget(QtGui.QWidget) :
         titleGridLayout.setColumnStretch(0, False);
         titleGridLayout.setColumnStretch(1, False);
         
-        # titre
-        titreLabelText = QtGui.QLabel("Subject : ")
-        titreLabelText.setMaximumWidth(50)
+
+
 
         self.titreLabel = None
         if self.data :
             if not self.multiDisplay :
-                self.titreLabel = QtGui.QLabel("<b>"+ str(self.data[0]["subject"]) +"</b>")
-                titleGridLayout.addWidget(titreLabelText  ,0,0)
-                titleGridLayout.addWidget(self.titreLabel ,0,1)
-                # status 
-                statusLabelText = QtGui.QLabel("Status : ")
-                statusLabelText.setMaximumWidth(50)
-                titleGridLayout.addWidget(statusLabelText, 1,0)
-        
+                pass
+                
 
         elif  comboFilterWidgetList[0] :
 
             self.queue = threadQueue
 
             idx = 0
-            self.shotComboBox = QtGui.QComboBox()
+            self.shotComboBox = QtGui.QComboBox( parent= self )
             for shotItem in comboFilterWidgetList[0] :
                 self.shotComboBox.addItem( shotItem["code"])
 
@@ -404,7 +397,7 @@ class noteLayoutWidget(QtGui.QWidget) :
             self.shotComboBox.currentIndexChanged.connect(self.getVersion)
 
 
-            titleGridLayout.addWidget(QtGui.QLabel("Shot"), idx,0)
+            titleGridLayout.addWidget(QtGui.QLabel("Shot" , parent= self ), idx,0)
             titleGridLayout.addWidget(self.shotComboBox , idx, 1)
             
             if len(comboFilterWidgetList[0]) ==1:
@@ -412,28 +405,29 @@ class noteLayoutWidget(QtGui.QWidget) :
             
 
             idx +=1
-            self.taskFilterWidget = comboFilterWidget2( *comboFilterWidgetList[1].retrieveDict(), showLabel = False )
+            self.taskFilterWidget = comboFilterWidget2( *comboFilterWidgetList[1].retrieveDict(), showLabel = False,  parent= self )
             self.taskFilterWidget.widget.currentIndexChanged.connect(  self.getVersion)
             comboFilterWidgetList[1].SIGNAL_currentIndexesChanged.connect(self.taskFilterWidget.setMyCurrentFromIndexes)
-            titleGridLayout.addWidget(QtGui.QLabel("Task"), idx,0)
+            titleGridLayout.addWidget(QtGui.QLabel("Task" , parent= self ), idx,0)
             titleGridLayout.addWidget(self.taskFilterWidget , idx,1)
 
 
             idx +=1
-            self.typeFilterWidget = comboFilterWidget2(*comboFilterWidgetList[2].retrieveDict(),showLabel = False )
+            self.typeFilterWidget = comboFilterWidget2(*comboFilterWidgetList[2].retrieveDict(),showLabel = False,  parent= self )
             comboFilterWidgetList[2].SIGNAL_currentIndexesChanged.connect(self.typeFilterWidget.setMyCurrentFromIndexes)
-            titleGridLayout.addWidget(QtGui.QLabel("Type"), idx,0)
+            titleGridLayout.addWidget(QtGui.QLabel("Type" , parent= self ), idx,0)
             titleGridLayout.addWidget(self.typeFilterWidget, idx,1)
 
 
 
             idx +=1
-            self.statusFilterWidget = comboFilterWidget2(*comboFilterWidgetList[3].retrieveDict(),showLabel = False )
+            self.statusFilterWidget = comboFilterWidget2(*comboFilterWidgetList[3].retrieveDict(),showLabel = False ,  parent= self )
             comboFilterWidgetList[3].SIGNAL_currentIndexesChanged.connect(self.statusFilterWidget.setMyCurrentFromIndexes)
-            titleGridLayout.addWidget(QtGui.QLabel("Status"), idx,0)
+            titleGridLayout.addWidget(QtGui.QLabel("Status" , parent = self ), idx,0)
             titleGridLayout.addWidget(self.statusFilterWidget , idx,1)
 
-            self.titreLabel = QtGui.QLineEdit("")
+            self.titreLabel = QtGui.QLineEdit("", parent = self)
+            self.titreLabel.hide()
 
             """
             idx +=1
@@ -441,18 +435,18 @@ class noteLayoutWidget(QtGui.QWidget) :
             titleGridLayout.addWidget(self.titreLabel ,idx,1)
             """
 
-            self.my_versionWidgetCombo = versionWidgetCombo()
+            self.my_versionWidgetCombo = versionWidgetCombo( parent = self )
             layout.addWidget( self.my_versionWidgetCombo )
 
             # separator
-            line = QtGui.QFrame()
+            line = QtGui.QFrame( parent = self  )
             line.setFrameShape(QtGui.QFrame.HLine)
             line.setFrameShadow(QtGui.QFrame.Sunken)
             layout.addWidget(line)
 
 
         else :
-            selectLabel = QtGui.QLabel("<font color:#F0F0F0><b> Select a Shot </b></font>")
+            selectLabel = QtGui.QLabel("<font color:#F0F0F0><b> Select a Shot </b></font>" , parent= self )
             selectLabel.setAlignment(QtCore.Qt.AlignCenter) 
             font = selectLabel.font()
             font.setPointSize(10)
@@ -475,23 +469,18 @@ class noteLayoutWidget(QtGui.QWidget) :
                     versionLayout.setContentsMargins(0,0,0,0)
                     layout.addLayout(versionLayout )
                     for versionDict in noteLinkVersion :
-                        versionLayout.addWidget(versionWidget(versionDict) )
+                        versionLayout.addWidget(versionWidget(versionDict , parent = self) )
                     if len(noteLinkVersion) == 2 :
-                        labelArrow =  QtGui.QLabel()
+                        labelArrow =  QtGui.QLabel( parent= self )
                         labelArrow.setPixmap(QtGui.QPixmap(getRessources("versionArrow.png" ) ) )
                         versionLayout.insertWidget(1, labelArrow )
 
 
                 if noteLinkVersion :
-                    line = QtGui.QFrame()
+                    line = QtGui.QFrame( parent= self )
                     line.setFrameShape(QtGui.QFrame.HLine)
                     line.setFrameShadow(QtGui.QFrame.Sunken)
                     layout.addWidget(line)
-
-                self.statusLabel = QtGui.QLabel()
-                self.statusLabel.setText('<img src="'+getRessources("status_"+self.data[0]["sg_status_list"] +".png")+'" />') 
-        
-                titleGridLayout.addWidget(self.statusLabel, 1,1)
 
 
         # Note content
@@ -499,9 +488,9 @@ class noteLayoutWidget(QtGui.QWidget) :
 
         if self.data :
             if not self.multiDisplay :
-                contentLayout.addWidget(noteContentLayout("Note", self.data[0] ))
+                contentLayout.addWidget(noteContentLayout("Note", self.data[0],  noteData = None, parent = self ))
         elif  comboFilterWidgetList[0] :
-            my_noteContentLayout = noteContentLayout("Note", None)
+            my_noteContentLayout = noteContentLayout("Note", None,  noteData = None, parent = self )
             my_noteContentLayout.SIGNAL_send_NoteContent.connect(self.todo)
 
             contentLayout.addWidget(my_noteContentLayout)
@@ -518,10 +507,10 @@ class noteLayoutWidget(QtGui.QWidget) :
                 tmpLayout.addStretch()
 
 
-                w = QtGui.QWidget()
+                w = QtGui.QWidget( parent= self )
                 w.setLayout( tmpLayout )
 
-                myScrollNote = QtGui.QScrollArea()
+                myScrollNote = QtGui.QScrollArea( parent= self )
                 myScrollNote.setHorizontalScrollBarPolicy ( QtCore.Qt.ScrollBarAlwaysOff )
                 myScrollNote.setWidget(w)
                 myScrollNote.setWidgetResizable(True)
@@ -530,7 +519,7 @@ class noteLayoutWidget(QtGui.QWidget) :
                 style = "QScrollArea {border: 0px none gray; border-radius: 0px;}"
                 myScrollNote.setStyleSheet(style)
 
-                self.myNoteBox    = QtGui.QGroupBox( str(self.data[0]["subject"])  )
+                self.myNoteBox    = QtGui.QGroupBox( str(self.data[0]["subject"] )  )
                 self.myNoteBox.setCheckable(True)
 
                 self.myNoteBox.installEventFilter(self)
@@ -565,39 +554,39 @@ class noteLayoutWidget(QtGui.QWidget) :
         if self.data :
             if not self.multiDisplay :
                 
-            
-                replyDataList = self.data[0]["queriedReplies"] #[0,1,2]
-                myform = QtGui.QVBoxLayout()
-                myReplyBox = QtGui.QGroupBox()
-                
-
-                style = " QGroupBox  { background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 255, 255, 0%), stop: 1 rgba(0, 0, 0, 33%) ); border: 0px none gray; border-radius: 0px}"
-
-                myReplyBox.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
-                myReplyBox.setStyleSheet(style)
-                myReplyBox.setLayout(myform)
-                
-                scroll = QtGui.QScrollArea()
-
-                scroll.setWidget(myReplyBox)
-                scroll.setWidgetResizable(True)
-
-
-                style = "QScrollArea {border: 0px none gray; border-radius: 0px;}"
-                scroll.setStyleSheet(style)
-                scroll.setHorizontalScrollBarPolicy ( QtCore.Qt.ScrollBarAlwaysOff )
-                moveScrollBarToBottom = lambda min, max : scroll.verticalScrollBar().setValue(max)
-                scroll.verticalScrollBar().rangeChanged.connect(moveScrollBarToBottom) 
-                
-
-
-                myEmptyNewReply = noteContentLayout("Reply", None,    self.data    , None)
+                myEmptyNewReply = noteContentLayout("Reply", None,    noteData = self.data, parent = self )
                 myEmptyNewReply.SIGNAL_createReply.connect( self.replyNoteSlot )
-
+                
+                replyDataList = self.data[0]["queriedReplies"]
                 if replyDataList :
+            
+                     #[0,1,2]
+                    myform = QtGui.QVBoxLayout()
+                    myReplyBox = QtGui.QGroupBox()
+                    
+
+                    style = " QGroupBox  { background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 255, 255, 0%), stop: 1 rgba(0, 0, 0, 33%) ); border: 0px none gray; border-radius: 0px}"
+
+                    myReplyBox.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
+                    myReplyBox.setStyleSheet(style)
+                    myReplyBox.setLayout(myform)
+                    
+                    scroll = QtGui.QScrollArea( parent= self )
+
+                    scroll.setWidget(myReplyBox)
+                    scroll.setWidgetResizable(True)
+
+
+                    style = "QScrollArea {border: 0px none gray; border-radius: 0px;}"
+                    scroll.setStyleSheet(style)
+                    scroll.setHorizontalScrollBarPolicy ( QtCore.Qt.ScrollBarAlwaysOff )
+                    moveScrollBarToBottom = lambda min, max : scroll.verticalScrollBar().setValue(max)
+                    scroll.verticalScrollBar().rangeChanged.connect(moveScrollBarToBottom) 
+
+
                     for replyData in  replyDataList :
-                        myform.addWidget(noteContentLayout("Reply", replyData, None))
-                        line = QtGui.QFrame()
+                        myform.addWidget(noteContentLayout("Reply", replyData, noteData = None, parent = self ))
+                        line = QtGui.QFrame( parent = self )
                         line.setFrameShape(QtGui.QFrame.HLine)
                         line.setFrameShadow(QtGui.QFrame.Sunken)
 
@@ -605,7 +594,7 @@ class noteLayoutWidget(QtGui.QWidget) :
                     
                     
 
-                    replyBox = QtGui.QGroupBox(" Replies ")
+                    replyBox = QtGui.QGroupBox(" Replies " )
                     replyBox_layout = QtGui.QHBoxLayout()
                     replyBox_layout.setContentsMargins(0,10,0,0)
                     replyBox.setLayout(replyBox_layout)
@@ -623,7 +612,7 @@ class noteLayoutWidget(QtGui.QWidget) :
 
          
 
-                myEmptyNewReply = noteContentLayout("Reply", None,  self.data   , None)
+                myEmptyNewReply = noteContentLayout("Reply", None,  noteData = self.data, parent = self  )
                 myEmptyNewReply.SIGNAL_createMultiReply.connect( self.multiReplyNoteSlot )
                 
                 layout.addWidget(myEmptyNewReply)

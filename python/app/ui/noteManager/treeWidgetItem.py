@@ -37,19 +37,25 @@ class comboFilterWidget2(QtGui.QWidget):
         self.entriesDictList =  entriesDictList 
 
  
+        label = QtGui.QLabel(  parent = self )
+        icon  = QtGui.QLabel( parent = self )
 
         self.multiCheckable = multiCheckable 
 
         if showLabel :
-            label = QtGui.QLabel( typeDict["name"] )
-            icon  = QtGui.QLabel()
+            label.setText( typeDict["name"] )
+            
             icon.setPixmap(  QtGui.QPixmap(getRessources(typeDict["icon"])).scaled ( 16, 16, QtCore.Qt.KeepAspectRatio )  )
             icon.setMaximumWidth(16)
-            layout.addWidget(icon)
+
             layout.addWidget(label)
+            layout.addWidget(icon)
+            if not typeDict["name"] :
+                label.hide()
+                layout.setSpacing(0)
     
-        self.widget = QtGui.QComboBox()
-        self.widget.setItemDelegate(QtGui.QItemDelegate(self ))
+        self.widget = QtGui.QComboBox( parent = self )
+        self.widget.setItemDelegate( QtGui.QItemDelegate(self ))
 
         self.widget.setMinimumWidth(120)
 
@@ -81,6 +87,7 @@ class comboFilterWidget2(QtGui.QWidget):
                 
                 if self.widget.count == 1 :
                     self.widget.setEnabled(False)
+
 
 
             else :
@@ -128,7 +135,6 @@ class comboFilterWidget2(QtGui.QWidget):
             
         elif self.widget.count() == 1 :
             self.widget.setEnabled(False)
-
 
 
         layout.addWidget(self.widget)
@@ -402,8 +408,11 @@ class comboFilterWidget2(QtGui.QWidget):
         
         if self.widget.count()==1:
             self.widget.setEnabled(False)
+
+
         else :
             self.widget.setEnabled(True)
+            self.show()
         
 
 
@@ -438,19 +447,257 @@ class lineEditFilterWidget(QtGui.QWidget) :
         else :
             return None
 
+
+class taskLinks(QtGui.QWidget ):
+
+    def __init__(self, childNoteTasks, parent = None):
+        QtGui.QWidget.__init__(self, parent)
+        layout = QtGui.QHBoxLayout()
+        layout.setContentsMargins(0,0,0,0)
+        layout.setSpacing(0)
+        self.setLayout(layout)
+ 
+        self.mainLabel = None
+        self.normalStyle = None
+        self.highlightStyle = None 
+
+        test = "border-radius: 3px 3px ; "
+        borderType = "outset "
+        styleAlign = " qproperty-alignment: AlignCenter; "
+
+        idx = 0
+        for a in childNoteTasks :
+
+
+            if borderType == "inset " :
+                borderType = "outset "
+            else :
+                borderType = "inset "
+
+            colorLabel = None #QtGui.QPushButton() #QtGui.QLabel()
+            statusLabel = None
+            transparent = "0"
+
+
+
+
+            underLayout = QtGui.QHBoxLayout()
+            underLayout.setContentsMargins(0,0,0,0)
+            underLayout.setSpacing(1)
+            underLayout.addSpacing(3)
+            layout.addLayout(underLayout)
+
+            
+
+            if a["type"] == "master" :  
+                if idx == 0 : # [TaskName]
+                    colorLabel = QtGui.QLabel( parent = self)
+                    self.mainLabel = colorLabel
+
+                    colorLabel.setAutoFillBackground(True)
+                    colorLabel.setMaximumHeight(16)
+                    font = colorLabel.font()
+                    font.setPointSize(9);
+                    font.setWeight( QtGui.QFont.Bold )
+                    
+                    colorLabel.setFont(font)
+                    colorLabel.setText(a["name"])       
+                    underLayout.addWidget(colorLabel )
+
+                    if a["status"] == "opn"  :
+                        foreColor =  "color : rgb(210,210,210);"
+                    elif a["status"] == "ip" :
+                        foreColor = "color : rgb(60,60,30);"
+                    else :
+                        foreColor =  "color : rgb(150,150,150);"
+
+                    
+                    borderType = " none "
+                    styleAlign =  " qproperty-alignment: AlignCenter; "
+                    style = "QLabel {  " + styleAlign + foreColor + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
+                    colorLabel.setStyleSheet(style)
+
+                    self.normalStyle = style
+                    self.highlightStyle = "QLabel {  " + styleAlign + " color :rgb(48,226,227) ; " + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
+                   
+                
+                else : 
+                    colorLabel = QtGui.QPushButton( parent = self)
+
+                    fct = lambda checked = False, noteId =  a['id'], taskName = a["name"] : parent.selectNote_from_id( noteId, taskName )
+                    colorLabel.clicked.connect(fct)
+                    colorLabel.enterEvent = lambda event, noteId = a['id'], parentTree = parent : self.my_enterEvent(event, noteId, parentTree) 
+                    colorLabel.leaveEvent = lambda event, noteId = a['id'], parentTree = parent : self.my_leaveEvent(event, noteId, parentTree) 
+
+                    colorLabel.setAutoFillBackground(True)
+                    colorLabel.setMaximumHeight(15)
+                    colorLabel.setFlat(True)
+                    font = colorLabel.font()
+                    font.setPointSize(8);
+                    font.setWeight( QtGui.QFont.Bold )
+                    
+                    colorLabel.setFont(font)
+                    colorLabel.setText(a["name"])       
+                    underLayout.addWidget(colorLabel)
+
+                    if a["status"] == "opn"  :
+                        foreColor =  "color : rgb(210,210,210);"
+                        backGroundColorStyle = " background-color : rgba( 71,101,125, 255 ) ; "
+                        backGroundColorStyle = " background-color : rgba( 40,141,223, 255 ) ; "
+                    elif a["status"] == "ip" :
+                        foreColor = "color : rgb(60,60,30);"
+                        backGroundColorStyle = " background-color : rgba( 173,155, 93, 255 ) ; "
+                        backGroundColorStyle = " background-color : rgba( 218,183, 98, 255 ) ; "
+
+                    else :
+                        foreColor =  "color : rgb(150,150,150);"
+                        backGroundColorStyle = " background-color : rgba( 95, 95, 95, 255 ) ; "
+                        backGroundColorStyle = " background-color : rgba( 35, 35, 35, 255 ) ; "
+
+                    hoverStyle = " QPushButton:hover{  border: 1px solid rgb(48,226,227);} "
+                    style = "QPushButton {  " + foreColor + backGroundColorStyle + test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
+                    colorLabel.setStyleSheet(style + hoverStyle)
+
+            else :
+                if idx == 0 : # [] * 
+
+                    """
+                    colorLabel = QtGui.QLabel( parent = self)
+                    colorLabel.setAutoFillBackground(True)
+                    colorLabel.setMaximumWidth(8)
+                    colorLabel.setMaximumHeight(11)
+                    
+                    underLayout.addWidget(colorLabel )
+                    style = "QLabel {  background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
+                    colorLabel.setStyleSheet(style)
+                    """
+
+                    statusLabel = QtGui.QLabel( parent = self)
+                    statusLabel.setText(a["name"])
+                    self.mainLabel = statusLabel
+
+                    font = statusLabel.font()
+                    font.setPointSize(9);
+                    font.setWeight( QtGui.QFont.Bold )
+                    statusLabel.setFont(font)
+                    underLayout.addWidget(statusLabel )
+
+
+                    
+                    if a["status"] == "opn"  :
+                        foreColor =  "color : rgb(210,210,210);"
+                    elif a["status"] == "ip" :
+                        foreColor = "color : rgb(60,60,30);"
+                    else :
+                        foreColor =  "color : rgb(150,150,150);"
+
+
+
+                    borderType = " none "
+                    styleAlign =  " "
+                    style = "QLabel {  " + styleAlign + foreColor + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
+                    statusLabel.setStyleSheet(style)
+                
+                    self.normalStyle = style
+                    self.highlightStyle = "QLabel {  " + styleAlign + " color :rgb(48,226,227) ; " + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
+                   
+
+                else :
+                    
+                    colorLabel = QtGui.QPushButton( parent = self)
+                    colorLabel.setAutoFillBackground(True)
+                    colorLabel.setMaximumWidth(10)
+                    colorLabel.setMaximumHeight(15)
+
+                    fct = lambda checked = False, noteId =  a['id'], taskName = a["name"] : parent.selectNote_from_id( noteId, taskName )
+                    colorLabel.clicked.connect(fct)
+                    colorLabel.enterEvent = lambda event, noteId = a['id'], parentTree = parent : self.my_enterEvent(event, noteId, parentTree) 
+                    colorLabel.leaveEvent = lambda event, noteId = a['id'], parentTree = parent : self.my_leaveEvent(event, noteId, parentTree) 
+
+
+                    statusLabel = QtGui.QLabel( parent = self)
+                    statusLabel.setText(a["name"])
+
+
+                    font = statusLabel.font()
+                    font.setPointSize(8);
+                    statusLabel.setFont(font)
+
+                    underLayout.addWidget(colorLabel )
+                    underLayout.addWidget(statusLabel )
+
+
+
+                    if a["status"] == "opn"  :
+                        backGroundColorStyle = " background-color : rgba( 71,101,125, 255 ) ; "
+                        backGroundColorStyle = " background-color : rgba( 40,141,223, 255 ) ; "
+                    elif a["status"] == "ip" :
+                        backGroundColorStyle = " background-color : rgba( 173,155, 93, 255 ) ; "
+                        backGroundColorStyle = " background-color : rgba( 218,183, 98, 255 ) ; "
+                    else :
+                        backGroundColorStyle = " background-color : rgba( 95, 95, 95, 255 ) ; "
+                        backGroundColorStyle = " background-color : rgba( 35, 35, 35, 255 ) ; "
+
+                    hoverStyle = " QPushButton:hover{  border: 1px solid rgb(48,226,227);} "
+                    style = "QPushButton { "+ backGroundColorStyle + " "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
+                    colorLabel.setStyleSheet(style + hoverStyle)
+                    
+
+
+                    if childNoteTasks[0]["status"] == "opn"  :
+                        foreColor =  "color : rgb(210,210,210);"
+                    elif childNoteTasks[0]["status"] == "ip" :
+                        foreColor = "color : rgb(60,60,30);"
+                    else :
+                        foreColor =  "color : rgb(150,150,150);"
+
+                    borderType = " none "
+                    styleAlign =  " "
+                    style = "QLabel {  " + styleAlign + foreColor + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
+                    statusLabel.setStyleSheet(style)
+
+            idx+=1
+
+        layout.addStretch()
+
+    def setMyLabelColor(self, state) :
+        if state :
+            self.mainLabel.setStyleSheet(self.highlightStyle)
+
+        else :
+            self.mainLabel.setStyleSheet(self.normalStyle)
+
+
+    def my_enterEvent(self, event , noteID, parentTree ) :
+
+        items = parentTree.findItems("note_%i"%noteID,  QtCore.Qt.MatchRecursive,10 )
+        for item in items :
+            item.taskLinksWidget.setMyLabelColor(True)
+
+    def my_leaveEvent(self, event , noteID, parentTree ) :
+
+        items = parentTree.findItems("note_%i"%noteID,  QtCore.Qt.MatchRecursive,10 )
+        for item in items :
+            item.taskLinksWidget.setMyLabelColor(False)
+
+
+
 class noteWidget(QtGui.QTreeWidgetItem) :
 
    #@decorateur_try_except
-    def __init__(self, parent, sgData, filterWidget, typeFilterWidget,  userNameFilterWidget, contentFilterWidget, entityAssignedFilterWidget  ):
+    def __init__(self, parent, sgData, taskFilterWidget, filterWidget, typeFilterWidget,  userNameFilterWidget, contentFilterWidget, entityAssignedFilterWidget  ):
 
         super(noteWidget, self).__init__(parent )
 
-
+        #print sgData
+        self.taskParsedName = "NoTask"
+        self.taskLinksWidget = None
         self.sgData = sgData
         self.filterWidget = filterWidget
         self.userNameFilterWidget = userNameFilterWidget
         self.contentFilterWidget = contentFilterWidget
         self.entityAssignedFilterWidget = entityAssignedFilterWidget
+        self.taskFilterWidget = taskFilterWidget
 
         content = "None"
         if sgData["content"] :
@@ -463,11 +710,52 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         self.setText(10, "note_%i"%sgData["id"] )
         self.setText(0, content )
 
+        masterTaskName = "NoTask"
+        if sgData["tasks"] :
+            masterTaskName = self.taskFilterWidget.retrieveNameFromValue( sgData["tasks"][0]["name"] ) 
+        
+        self.taskParsedName = masterTaskName
+
+        childNoteTasks = []
+        if sgData.has_key("spawnedDict") :
+            if sgData["spawnedDict"].has_key("masterSpawn") :
+                masterTask = { "name" : self.taskFilterWidget.retrieveNameFromValue( masterTaskName ) , "status" : sgData["sg_status_list"], "type":"master"    }
+                childNoteTasks.append(masterTask)
+                for childNote in sgData["spawnedDict"]["masterSpawn"] :
+                    childNoteTaskName = "NoTask"
+                    if childNote["tasks"] :
+                        childNoteTaskName = self.taskFilterWidget.retrieveNameFromValue( childNote["tasks"][0]["name"] )
+                    childNoteTasks.append(  { "name" : childNoteTaskName , "status" : childNote["sg_status_list"], "id":childNote["id"] , "type":"child"    } )
+
+            elif sgData["spawnedDict"].has_key("spawnFrom"):
+                
+                masterTask = { "name"  : self.taskFilterWidget.retrieveNameFromValue( masterTaskName ) ,"status" : sgData["sg_status_list"], "type":"child"    }
+                childNoteTasks.append(masterTask)
+                childNoteTaskName ="NoTask"
+                if sgData["spawnedDict"]["spawnFrom"]["tasks"] :
+                    childNoteTaskName = self.taskFilterWidget.retrieveNameFromValue( sgData["spawnedDict"]["spawnFrom"]["tasks"][0]["name"] )
+                childNoteTasks.append(  { "name"  : childNoteTaskName , "status" : sgData["spawnedDict"]["spawnFrom"]["sg_status_list"], "id":sgData["spawnedDict"]["spawnFrom"]["id"], "type":"master" } )
+
+                for siblingNote in sgData["spawnedDict"]["spawnSiblings"] : 
+                    childNoteTaskName = "NoTask"
+                    if siblingNote["tasks"] :
+                        childNoteTaskName = self.taskFilterWidget.retrieveNameFromValue( siblingNote["tasks"][0]["name"] )
+                    childNoteTasks.append(  { "name" : childNoteTaskName , "status" : siblingNote["sg_status_list"], "id":siblingNote["id"] , "type":"child"    } )
+
+        if not childNoteTasks :
+            self.setText(1, self.taskFilterWidget.retrieveNameFromValue( masterTaskName ) )
+            font = QtGui.QFont("" , 9 , QtGui.QFont.Bold )
+            self.setFont(1, font)
+        else :
+            self.taskLinksWidget =  taskLinks( childNoteTasks , parent = self.treeWidget() ) 
+            self.treeWidget().setItemWidget( self, 1 , self.taskLinksWidget)
 
         self.setText(2, sg_noteType )
 
-        self.setIcon(2, QtGui.QIcon( QtGui.QPixmap(getRessources(typeFilterWidget.retrieveIconFromValue( sg_noteType ))).scaled ( 16, 16, QtCore.Qt.KeepAspectRatio ) ) )
+        #self.setIcon(2, QtGui.QIcon( QtGui.QPixmap(getRessources(typeFilterWidget.retrieveIconFromValue( sg_noteType ))).scaled ( 16, 16, QtCore.Qt.KeepAspectRatio ) ) )
         self.setText(3, str(sgData["created_at"].strftime("%Y-%m-%d %H:%M"))  )
+        self.setText(9, str(sgData["created_at"].strftime("%Y-%m-%d %H:%M"))  )
+        self.setText(3, str("patapouf")  )
         self.setText(4, str(sgData["user"]["name"] )  )
         self.setText(6, str(sgData["shotCode"] )  )
         self.set_my_bacgroundColor()
@@ -478,11 +766,44 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         self.textBox = False
         self.editing_text = None
 
+    def getSpawnedFrom(self) :
+        if self.sgData.has_key("spawnedDict") :
+            if self.sgData["spawnedDict"].has_key("spawnFrom"):
+                return self.sgData["spawnedDict"]["spawnFrom"]
+
+        return None
 
 
 
+    def getSpawnedTaskNote(self) :
+
+        if self.sgData.has_key("spawnedDict") :
+            spawnedDict = {}
+            if self.sgData["spawnedDict"].has_key("masterSpawn") :
+                for a in  self.sgData["spawnedDict"]["masterSpawn"] :
+                    keyName = "NoTask"
+                    if a["tasks"] :
+                        keyName = self.taskFilterWidget.retrieveNameFromValue( a["tasks"][0]["name"] )
+                    spawnedDict[keyName] = a
+            else :
+                keyName = "NoTask"
+                if self.sgData["spawnedDict"]["spawnFrom"]["tasks"] :
+                    keyName = self.taskFilterWidget.retrieveNameFromValue(self.sgData["spawnedDict"]["spawnFrom"]["tasks"][0]["name"])
+                spawnedDict[keyName] = self.sgData["spawnedDict"]["spawnFrom"]
+                
+                for a in  self.sgData["spawnedDict"]["spawnSiblings"] :
+                    keyName = "NoTask"
+                    if a["tasks"] :
+                        keyName = self.taskFilterWidget.retrieveNameFromValue( a["tasks"][0]["name"] )
+                    spawnedDict[keyName] = a
+
+            return spawnedDict
+        else :
+            return {}
+
+        return {}
     def setEditableMode(self, editable) :
-
+        self.setHidden(True)
         if editable :
             print "edit"
             self.textBox = QtGui.QTextEdit()
@@ -507,115 +828,9 @@ class noteWidget(QtGui.QTreeWidgetItem) :
                     self.treeWidget().SIGNAL_updateNoteContent.emit( [text, self.sgData['id'] ] )
                 else :
                     print "no change"
-
-
-
-
-    #@decorateur_try_except
-    def __init_____working__but___wordWraping(self, parent, sgData, filterWidget, typeFilterWidget,  userNameFilterWidget, contentFilterWidget, entityAssignedFilterWidget  ):
-
-        super(noteWidget, self).__init__(parent )
-
-
-
-
-        self.sgData = sgData
-        self.filterWidget = filterWidget
-        self.userNameFilterWidget = userNameFilterWidget
-        self.contentFilterWidget = contentFilterWidget
-        self.entityAssignedFilterWidget = entityAssignedFilterWidget
-
-        content = "None"
-        if sgData["content"] :
-            content = unicode(sgData["content"] , "utf-8")
-
-        sg_noteType = "NoType"
-        if sgData["sg_note_type"] :
-            sg_noteType = str(sgData["sg_note_type"])
-
-        self.setText(10, "note_%i"%sgData["id"] )
-        #self.setText(0, content )
-
-        self.myContentLabel = QtGui.QLabel(sgData["content"], parent = self.treeWidget())
-        self.myContentLabel.setWordWrap(True)
-
-        self.treeWidget().setItemWidget(self, 0, self.myContentLabel)
-
-
-        self.setText(2, sg_noteType )
-
-        self.setIcon(2, QtGui.QIcon( QtGui.QPixmap(getRessources(typeFilterWidget.retrieveIconFromValue( sg_noteType ))).scaled ( 16, 16, QtCore.Qt.KeepAspectRatio ) ) )
-        self.setText(3, str(sgData["created_at"].strftime("%Y-%m-%d %H:%M"))  )
-        self.setText(4, str(sgData["user"]["name"] )  )
-        self.setText(6, str(sgData["shotCode"] )  )
-        self.set_my_bacgroundColor()
-        self.do_hidding()
-
-        self.setExpanded(False)
-
-        self.textBox = False
-        self.editing_text = None
-
-    #@decorateur_try_except
-
-
-    def setEditableMode___working__but___wordWraping(self, editable) :
-        self.setHidden(True)
-
-        
-        if editable :
-            print "edit"
-            self.editing_text = self.myContentLabel.text()
-            self.textBox = QtGui.QTextEdit()
-            self.textBox.setPlainText(self.myContentLabel.text() )
-            self.setSizeHint(0, self.textBox.sizeHint() )
-
-
-            self.treeWidget().removeItemWidget( self, 0 )
-            self.treeWidget().setItemWidget( self, 0 , self.textBox )
-            
-
-
-            #self.setText(0, "")
-        
-        else :
-            print "close"
-
-            if self.textBox :
-                text = self.textBox.toPlainText()
-                self.treeWidget().removeItemWidget( self, 0 )
-                
-                #self.myContentLabel.setText(  text )
-
-                if self.editing_text != text :
-                    
-                    self.myContentLabel =  QtGui.QLabel(text, parent = self.treeWidget())
-                    self.setSizeHint(0, self.myContentLabel.sizeHint() )
-                    
-
-                    self.treeWidget().setItemWidget( self, 0 , self.myContentLabel )
-
-                    """
-                    print "change"
-                    if not isinstance(text, unicode):
-                        text =  unicode ( text.toUtf8(), "utf-8" )
-
-                    self.treeWidget().SIGNAL_updateNoteContent.emit( [text, self.sgData['id'] ] )
-                    """
-                    
-                else :
-                    self.myContentLabel =  QtGui.QLabel(self.sgData["content"], parent = self.treeWidget())
-                    self.setSizeHint(0, self.myContentLabel.sizeHint() )
-
-
-
-                    self.treeWidget().setItemWidget( self, 0 , self.myContentLabel )
-
-                    print "no change"
-       
         self.setHidden(False)
-        
-        #self.treeWidget().SIGNAL_manualEdit.emit(self)
+
+
 
     
     def setTextColor(self, color, bold = False):
@@ -638,6 +853,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         self.setForeground(6, foreColor)
         self.setForeground(7, foreColor)
         self.setForeground(8, foreColor)
+        self.setForeground(9, foreColor)
 
 
         self.setBackground(0, backColor)
@@ -649,7 +865,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         self.setBackground(6, backColor)
         self.setBackground(7, backColor)
         self.setBackground(8, backColor)
-
+        self.setBackground(9, backColor)
 
     def set_my_bacgroundColor(self ): 
 
@@ -686,7 +902,8 @@ class noteWidget(QtGui.QTreeWidgetItem) :
                 self.setTextColor(QtGui.QColor(210,210,210))
             else :
                 self.setTextColor(QtGui.QColor(150,150,150))
-        
+        else :
+            self.setMultiColor(foreColor, backColor )
 
 
 
@@ -707,12 +924,17 @@ class noteWidget(QtGui.QTreeWidgetItem) :
             orig  = self.sgData["sg_status_list"]      + str(self.sgData["created_at"])
             other = otherItem.sgData["sg_status_list"] + str(otherItem.sgData["created_at"])
             return orig < other
+        elif column == 1 :
+            orig  = self.taskParsedName +  str( self.sgData["sg_note_type"] )      + self.sgData["sg_status_list"] + str(self.sgData["created_at"])
+            other = otherItem.taskParsedName +  str( otherItem.sgData["sg_note_type"] ) + otherItem.sgData["sg_status_list"] + str(otherItem.sgData["created_at"])
+            return orig < other 
+
         elif column == 2 :
             orig  = str(self.sgData["sg_note_type"])      + self.sgData["sg_status_list"] + str(self.sgData["created_at"])
             other = str(otherItem.sgData["sg_note_type"]) + otherItem.sgData["sg_status_list"] + str(otherItem.sgData["created_at"])
             return orig < other
 
-        elif column == 3 :
+        elif column == 9 :
             orig  = str(self.sgData["created_at"])
             other = str(otherItem.sgData["created_at"])
             return orig < other
@@ -801,6 +1023,18 @@ class noteWidget(QtGui.QTreeWidgetItem) :
             else :
                 return True
 
+    def checkFilterTasks(self) :
+        if not self.taskFilterWidget.getfilterList() :
+            
+            return True
+        else :
+            testTask = "NoTask" 
+            if self.sgData["tasks"] :
+                testTask = self.sgData["tasks"][0]["name"]
+            if testTask in self.taskFilterWidget.getfilterList() :
+                return False
+            else :
+                return True
 
     #@decorateur_try_except
     def do_hidding(self, getState = False) :
@@ -809,8 +1043,9 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         user    = self.checkFilterUser() 
         content = self.checkFilterContent()
         assignedTo = self.checkFilterAssigned()
+        task = self.checkFilterTasks()
 
-        if not status and not user and not content and not assignedTo:
+        if not status and not user and not content and not assignedTo and not task:
             self.setHidden(False)
             return False
         else :
@@ -818,111 +1053,6 @@ class noteWidget(QtGui.QTreeWidgetItem) :
             return True
 
         
-
-class groupNoteWidget(QtGui.QTreeWidgetItem) :
-
-    def __init__(self, parent, sgData ):
-        super(groupNoteWidget, self).__init__(parent )
-
-        self.sgData = sgData
-
-        self.setText(10, "bookmark_%i"%sgData["id"] )
-        self.setText(0, str(sgData["name"])  )
-
-        self.setIcon(0, QtGui.QIcon( getRessources(u"bookmark.png" ) ) )
-        self.setExpanded(False)
-
-
-
-
-class typeNoteWidget(QtGui.QTreeWidgetItem) :
-    #@decorateur_try_except
-    def __init__(self, parent, sgData, filterWidget, group ):
-
-        super(typeNoteWidget, self).__init__(parent )
-
-
-        self.sgData = sgData
-        self.filterWidget = filterWidget
-
-        self.typeStr = "NoType"
-        
-        if sgData["name"]:
-            self.typeStr = sgData["name"]
-
-
-        if group :
-            self.setText(10, "type_%s"%sgData["name"] )
-
-        else :
-            self.setText(10, "type_")
-            self.typeStr = "all Type"
-            self.setMysizeHint()
-
-
-        self.setText(0, str( self.typeStr)  )
-
-        ressources = QtGui.QPixmap( getRessources( self.filterWidget.typeDict["icon"] ) )
-        for dataEntries in self.filterWidget.entriesDictList :
-            if self.typeStr in dataEntries["values"] :
-                   ressources = QtGui.QPixmap( getRessources(dataEntries["icon"]) )
-
-        ressources =  ressources.scaled (16, 16, QtCore.Qt.KeepAspectRatio)
-
-        self.setIcon(0, QtGui.QIcon(ressources ) )
-        self.setExpanded(False)
-    
-        self.do_hidding()
-
-    
-    def setMysizeHint( self ) :
-        self.setSizeHint(0, QtCore.QSize(0,0))
-        self.setSizeHint(1, QtCore.QSize(0,0))
-        self.setSizeHint(2, QtCore.QSize(0,0))
-        self.setSizeHint(3, QtCore.QSize(0,0))
-        self.setSizeHint(4, QtCore.QSize(0,0))
-        self.setSizeHint(5, QtCore.QSize(0,0))
-        self.setSizeHint(6, QtCore.QSize(0,0))
-        self.setSizeHint(7, QtCore.QSize(0,0))
-        self.setSizeHint(8, QtCore.QSize(0,0))
-        self.setSizeHint(9, QtCore.QSize(0,0))
-    def __lt__(self, otherItem):
-        return 0
-
-
-    def do_hidding(self) :
-
-
-        if not self.filterWidget.getfilterList() :
-           self.setHidden(True)
-           self.setExpanded(True)
-           return False 
-        else :
-            if self.typeStr == "all Type" :
-
-                self.setHidden(False)
-                self.setExpanded(True)
-
-                for child_idx in range(self.childCount()) :
-                    childItem = self.child(child_idx) 
-
-                    if str(childItem.text(2)) in self.filterWidget.getfilterList() :
-                        childItem.setHidden(False)
-                        childItem.do_hidding()
-                    else : 
-                        childItem.setHidden(True)
-
-                return True
-
-            elif self.typeStr in self.filterWidget.getfilterList() :
-                self.setHidden(False)
-                self.setExpanded(True)
-                return False
-
-            else :
-                self.setHidden(True)
-                self.setExpanded(False)
-                return True
 
 
 class taskWidget(QtGui.QTreeWidgetItem) :
@@ -937,8 +1067,8 @@ class taskWidget(QtGui.QTreeWidgetItem) :
 
         self.sgData = sgData
 
-        self.setText(10, "task_%s"%sgData["name"] )
-        
+        #self.setText(10, "task_%s"%sgData["name"] )
+        self.setText(10, "task_dontCarre" )
         
 
         font = QtGui.QFont("" , 9 , QtGui.QFont.Bold )
@@ -946,10 +1076,11 @@ class taskWidget(QtGui.QTreeWidgetItem) :
 
 
         self.setText(0, str(sgData["name"])  )
-        self.setText(1, str(0) )
+        self.setText(0, "Create New note"  )
+        #self.setText(1, str(0) )
 
 
-        ressources = QtGui.QPixmap(  getRessources( self.filterWidget.typeDict["icon"] ) )
+        ressources = QtGui.QPixmap(  getRessources( "add_notes.png" ) )
         
         for dataEntries in self.filterWidget.entriesDictList :
             if self.sgData["name"] in dataEntries["values"] :
@@ -960,11 +1091,25 @@ class taskWidget(QtGui.QTreeWidgetItem) :
 
         ressources =  ressources.scaled (32, 32, QtCore.Qt.KeepAspectRatio)
 
-
+        #self.setMysizeHint()
         self.setIcon(0, QtGui.QIcon(  ressources ) )
-        self.setExpanded(False)
+        self.setExpanded(True)
+        
         self.do_hidding()
 
+
+
+    def setMysizeHint( self ) :
+        self.setSizeHint(0, QtCore.QSize(0,0))
+        self.setSizeHint(1, QtCore.QSize(0,0))
+        self.setSizeHint(2, QtCore.QSize(0,0))
+        self.setSizeHint(3, QtCore.QSize(0,0))
+        self.setSizeHint(4, QtCore.QSize(0,0))
+        self.setSizeHint(5, QtCore.QSize(0,0))
+        self.setSizeHint(6, QtCore.QSize(0,0))
+        self.setSizeHint(7, QtCore.QSize(0,0))
+        self.setSizeHint(8, QtCore.QSize(0,0))
+        self.setSizeHint(9, QtCore.QSize(0,0))
 
     #@decorateur_try_except
     def findItems(self, text, method,col) :
@@ -975,6 +1120,15 @@ class taskWidget(QtGui.QTreeWidgetItem) :
                 matchItem.append(childItem)
 
         return matchItem
+
+    def find_all_notesId(self) :
+        idNoteList = []
+        for child_idx in range(self.childCount()) :
+            childItem = self.child(child_idx) 
+        
+            idNoteList.append(childItem.sgData["id"])
+
+        return idNoteList
 
     def __lt__(self, otherItem):
         currentIdx = self.filterWidget.retrieveIndiceFromValue(self.text(0))
@@ -993,6 +1147,10 @@ class taskWidget(QtGui.QTreeWidgetItem) :
         """
 
     def do_hidding(self) :
+        self.setHidden(False)
+        self.setExpanded(True)
+
+        return
         """
         if self.text(0) == "NoTask" :
             self.setHidden(False)
@@ -1000,7 +1158,7 @@ class taskWidget(QtGui.QTreeWidgetItem) :
             return False 
         """
         if not self.filterWidget.getfilterList() :
-           self.setHidden(True)
+           self.setHidden(False)
            self.setExpanded(True)
            return False 
         else :
@@ -1009,8 +1167,8 @@ class taskWidget(QtGui.QTreeWidgetItem) :
                 self.setExpanded(True)
                 return False
             else :
-                self.setHidden(True)
-                self.setExpanded(False)
+                self.setHidden(False)
+                self.setExpanded(True)
                 return True
 
 
@@ -1036,15 +1194,36 @@ class sequenceWidget(QtGui.QTreeWidgetItem) :
 
         return matchItem
 
+class assetWidget(QtGui.QTreeWidgetItem) :
 
+
+    def __init__(self, parent, sgData ):
+        super(assetWidget, self).__init__(parent )
+
+        self.sgData = sgData
+
+        self.setText(10, "assetType_%s"%sgData )
+        self.setText(0, str(sgData)  )
+
+        self.setIcon(0, QtGui.QIcon( getRessources(u"asset.png" ) ) )
+        self.setExpanded(False)
+
+    def getShotWidgetList(self) :
+        matchItem = []
+        for child_idx in range(self.childCount()) :
+            matchItem.append(self.child(child_idx) )
+
+        return matchItem
 
 class shotAssetWidget(QtGui.QTreeWidgetItem) :
     x = 128
     y = 128
-    def __init__(self, parent, sgData ):
+    def __init__(self, parent, sgData, entityType ):
         super(shotAssetWidget, self).__init__(parent )
 
         self.sgData = sgData
+
+
 
         self.setText(10, "shotAsset_%i"%sgData["id"]  )
         self.setText(0, str(sgData["code"])  )
@@ -1058,5 +1237,16 @@ class shotAssetWidget(QtGui.QTreeWidgetItem) :
                 matchItem.append(childItem)
 
         return matchItem
+
+
+
+
+
+
+
+
+
+
+
 
 

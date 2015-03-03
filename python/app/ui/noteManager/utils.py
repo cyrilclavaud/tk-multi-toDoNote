@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+
 import traceback
 import os
 import sys
@@ -91,10 +92,12 @@ def pprint(text, clear = None) :
 def getExec(filename):
     return os.path.join(os.path.dirname(__file__),u"bin",filename)
 
-
 def getRessources(filename):
     return os.path.join(os.path.dirname(__file__),u"ressources",filename)
 
+def getStyle(filename):
+    return os.path.join(os.path.dirname(__file__),u"style",filename)
+    
 def osSystem(path) :
     if sys.platform == "darwin":
         #plog('open -a "QuickTime Player 7" %s'%path )
@@ -119,7 +122,7 @@ def getPathToImagePlugins():
     return "Z:/sharedPython2.6/site-packages_win64/PyQt4/plugins"
 
 def getPathToShotgunApi():
-
+    #return "D:\DATA\NOZON_shotgun\python-api-master"
     path = ""
     if sys.platform == "darwin":
         path = "/mnt/shared/Dev/cyril/python/PACKAGES"

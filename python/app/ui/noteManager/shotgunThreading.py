@@ -26,7 +26,7 @@ except :
 import utils
 from utils import *
 
-
+import time
 
 ############### THREADING CLASS ################# 
 
@@ -39,6 +39,8 @@ class sg_query(QtCore.QThread) :
     SCRIPT_KEY = '3fbb2a5f180457af709fcad231c96ac8a916711427af5a06c47eb1758690f6e4'
 
     SIGNAL_queryAllShot = _signal(object)
+    SIGNAL_queryAllAsset = _signal(object)
+
     SIGNAL_setNoteList = _signal(object)
     SIGNAL_setThumbnail = _signal(object)
     SIGNAL_clearTree = _signal(object)
@@ -77,6 +79,7 @@ class sg_query(QtCore.QThread) :
                 sys.path.append( path_to_shotgunApi )
                 from shotgun_api3 import Shotgun
                 self.sg = Shotgun(self.SERVER_PATH, self.SCRIPT_NAME, self.SCRIPT_KEY)
+                pprint("thread init \n" )
             else :
               
                 self.sg = app.engine.tank.shotgun # too slow
@@ -172,10 +175,22 @@ class sg_query(QtCore.QThread) :
             #pass
             self.getExecutable(threadCommandArgs, threadCommandCallBack)
 
+        elif stringCommandSwitch == u"setNoteLink" :
+            self.setSpawnNote(threadCommandArgs, threadCommandCallBack)
+
         elif stringCommandSwitch == u"linkToLastVersion" :
             self.linkToLastVersion(threadCommandArgs, threadCommandCallBack )
 
+        elif stringCommandSwitch == u"breakSpawnLink" :
+            self.breakSpawnLink(threadCommandArgs, threadCommandCallBack )
 
+
+        # SUB THREAD # called by the threading class
+        elif stringCommandSwitch == u"queryNote_Masterspawn":
+            self.queryNote_Masterspawn(threadCommandArgs, threadCommandCallBack )
+
+        elif stringCommandSwitch == u"queryNote_spawned":
+            self.queryNote_spawned(threadCommandArgs, threadCommandCallBack )
 
     def queryTaskAssigned(self, shotSgData_taskList_noteId, callBack = None ) :
 
@@ -207,17 +222,19 @@ class sg_query(QtCore.QThread) :
     def queryAllShot(self, args = None,  callback = None): 
 
         projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
-        
         shotList = self.sg.find("Shot", [projectFilter], [u"code", u"image", u"sg_sequence" ])
-
         self.SIGNAL_queryAllShot.emit( shotList )
-    
+
+        
+        assetList = self.sg.find("Asset", [projectFilter], [u"code", u"image", u"sg_asset_type" ])    
+        self.SIGNAL_queryAllAsset.emit( assetList )
+        
+
     @decorateur_try_except
     def downloadThumbnail(self, args = None, callback = None) :
 
         i = 0
         for entityDict in args :
-            
             
             if entityDict['image'] :
 
@@ -229,10 +246,12 @@ class sg_query(QtCore.QThread) :
                 if not os.path.isfile(thumbNameFile ):
                     urllib.urlretrieve(entityDict['image'], thumbNameFile)
 
-
                 self.SIGNAL_setThumbnail.emit( [  "shotAsset_%i"%entityDict["id"], thumbNameFile ] )
             else :
-                self.SIGNAL_setThumbnail.emit( [  "shotAsset_%i"%entityDict["id"], getRessources("emptyShot.png") ] )
+                if entityDict.has_key("sg_asset_type") :
+                    self.SIGNAL_setThumbnail.emit( [  "shotAsset_%i"%entityDict["id"], getRessources("emptyAsset.png") ] )
+                else :
+                    self.SIGNAL_setThumbnail.emit( [  "shotAsset_%i"%entityDict["id"], getRessources("emptyShot.png") ] )
 
     @decorateur_try_except
     def downloadVersionThumbnail(self, entityDict) :
@@ -245,22 +264,109 @@ class sg_query(QtCore.QThread) :
         return thumbNameFile
 
     @decorateur_try_except
-    def queryNotes(self, args = None, parentWidget = None):
+    def queryNotes(self, args = None, callBack = None):
 
 
+        print args
+
+        ENTITY_TYPE = args['type']
+
+        
         projectFilter  = ['project','is', { 'type':'Project', 'id':self.project} ]
-        shotFilter     = ['note_links','is', { 'type':'Shot', 'id':args['id'] } ]
+        shotFilter     = ['note_links','is', { 'type': ENTITY_TYPE , 'id':args['id'] } ]
+
+        sg_spawnedNotes = self.sg.find("CustomEntity04",[projectFilter, ["code","is", "link_%i"%args['id']]  ],    ["sg_note","sg_note_links"] )
 
 
         filterList = [projectFilter, shotFilter ]
+        if args.has_key("getOnly_Notes") :
+            filterList.append( ["id","in", args["getOnly_Notes"]] )
+
         noteList = []
-        if  self.typeFilterWidget.getfilterList() :
-            filterList.append(['sg_note_type', 'in', self.typeFilterWidget.getfilterList() ]) 
-            noteList = self.sg.find("Note", filterList , ["sg_status_list","tag_list","sg_note_type","tasks", "subject", "created_at", "user", "content"] )
-        #noteList = self.sg.find("Note", [ projectFilter, shotFilter ] , ["sg_status_list","tag_list","sg_note_type","tasks", "subject", "created_at", "user", "content"] )
+        typeFilterList = self.typeFilterWidget.getfilterList()
+        if typeFilterList  :
+            if "NoType" in typeFilterList :
+                typeFilter = { "filter_operator": "any", "filters" : [ ['sg_note_type', 'in', typeFilterList ], ['sg_note_type', 'is', None] ] }
+            else :
+                typeFilter = ['sg_note_type', 'in', typeFilterList ]
 
-        self.SIGNAL_setNoteList.emit(  [ [ "shotAsset_%i"%args["id"] , args['code'], args['id']]  ,noteList, parentWidget ] )
+            filterList.append(typeFilter) # self.typeFilterWidget.getfilterList() ]) 
+        
 
+        noteList = self.sg.find("Note", filterList , ["sg_status_list","tag_list","sg_note_type","tasks", "subject", "created_at", "user", "content"] )
+
+
+        soloNoteList = []
+        
+        for note in noteList :
+            isSolo = True
+
+            for sg_spawned in sg_spawnedNotes :
+                spawnedDict  = {}
+                if note['id'] == sg_spawned["sg_note"]["id"] :
+                    note["spawnLinkId"] = sg_spawned["id"]
+                    callBack = lambda note :  self.SIGNAL_setNoteList.emit(  [ [ "shotAsset_%i"%args["id"] , args['code'], args['id']]  ,  [note] , args.has_key("getOnly_Notes") ] )
+                    self.queue.put([ -1000, "queryNote_Masterspawn", [note, sg_spawned["sg_note_links"] ] , callBack ] ) 
+                    isSolo = False 
+
+                    break
+
+                elif any(spawned_note['id'] ==  note['id'] for spawned_note in sg_spawned["sg_note_links"]) :
+                    note["spawnLinkId"] = sg_spawned["id"]
+
+                    callBack = lambda note :  self.SIGNAL_setNoteList.emit(  [ [ "shotAsset_%i"%args["id"] , args['code'], args['id']]  ,  [note] , args.has_key("getOnly_Notes") ] )
+                    
+                    self.queue.put([ -1000, "queryNote_spawned", [note,  sg_spawned["sg_note"], sg_spawned["sg_note_links"] ] , callBack ] ) 
+                    isSolo = False
+
+                    break
+
+            if isSolo :     
+
+                soloNoteList.append(note)
+
+
+        self.SIGNAL_setNoteList.emit(  [ [ "shotAsset_%i"%args["id"] , args['code'], args['id']]  ,  soloNoteList , args.has_key("getOnly_Notes") ] )
+
+
+
+
+    # called by self
+    def queryNote_Masterspawn(self, note_And_SpawnedList, callBack) :
+
+        note = note_And_SpawnedList[0]
+        spawnedList = note_And_SpawnedList[1]
+        spawnedDict  = { "masterSpawn" : [] }
+
+        for spawned in spawnedList :
+            spawnedDict["masterSpawn"].append( self.getNoteWithStatus(spawned["id"]) )
+        note["spawnedDict"] = spawnedDict
+
+        callBack(note)
+
+    # called by self
+    def queryNote_spawned(self, note_masterNote_And_SpawnedList, callBack) :
+        note = note_masterNote_And_SpawnedList[0]
+
+
+        masterNote = note_masterNote_And_SpawnedList[1]
+        spawnedList = note_masterNote_And_SpawnedList[2]
+        spawnedDict  = { "spawnFrom" : self.getNoteWithStatus( masterNote["id"]) , "spawnSiblings" : [] }
+
+
+        for sibNote in  spawnedList :
+            if sibNote["id"] !=  note['id'] :
+                spawnedDict["spawnSiblings"].append( self.getNoteWithStatus( sibNote["id"] ) )   
+        note["spawnedDict"] = spawnedDict
+        callBack(note)
+
+
+    def getNoteWithStatus(self, noteId):
+        projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
+        noteFilter = ['id','is',noteId ]
+        filterList = [projectFilter, noteFilter]
+        note = self.sg.find_one("Note", filterList, ["sg_status_list", "tasks"] )
+        return note
 
     @decorateur_try_except
     def queryNoteContent(self, args = None, args2 = None) :
@@ -666,8 +772,10 @@ class sg_query(QtCore.QThread) :
             # 3 taskList link
             subjectTaskStr = ""
 
+            objectType = noteDict[2]["type"]
+
             if noteDict[3] :
-                taskDict = self.sg.find_one("Task", [ [ "content",'in', noteDict[3] ], ["entity", "is", [{"type" : "Shot", "id": noteDict[2]["id"] }]  ] ], ["content"] )
+                taskDict = self.sg.find_one("Task", [ [ "content",'in', noteDict[3] ], ["entity", "is", [{"type" : objectType, "id": noteDict[2]["id"] }]  ] ], ["content"] )
                 if taskDict :
                     noteDict[0].update({"tasks" : [taskDict] }  )
                     subjectTaskStr = " on " + taskDict["content"]
@@ -697,6 +805,107 @@ class sg_query(QtCore.QThread) :
 
             resultNote.update({"shotCode" : noteDict[2]['code'], "shotId" : noteDict[2]['id'] } )
             self.SIGNAL_addNote.emit( [ resultNote ] )
+
+    def breakSpawnLink(self, spawnLinkId_shotData, threadCommandCallBack = None) :
+        projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
+        spawnLinkId = spawnLinkId_shotData[0]
+        shotId = spawnLinkId_shotData[1]
+        shotCode = spawnLinkId_shotData[2]
+
+        spawnLink = self.sg.find_one("CustomEntity04",[projectFilter, ["id","is", spawnLinkId ]  ],  ["sg_note","sg_note_links"] )
+        refresh_id_list= [spawnLink["sg_note"]["id"] ]
+        for spawnedNote in spawnLink["sg_note_links"] :
+            refresh_id_list.append(spawnedNote["id"])
+
+
+        self.sg.delete("CustomEntity04", spawnLinkId)
+        
+        sgDataShot = {"id" : shotId , "code" : shotCode , "getOnly_Notes" : refresh_id_list }  
+
+        self.queue.put( [1, u"queryNotes"  , sgDataShot, None ] ) 
+
+
+    def setSpawnNote(self, noteSgData_taskValues_list,  threadCommandCallBack = None) :
+        
+        sg_task = self.sg.find_one("Task", [ [ "content",'in', noteSgData_taskValues_list[1]], ["entity", "is", [{"type" : "Shot", "id": noteSgData_taskValues_list[0]["shotId"] }]  ] ], ["content"] )
+        
+        subjectTaskStr = "NoTask"
+        if sg_task :
+            subjectTaskStr = sg_task["content"]
+
+        from_subjectTaskStr = "NoTask"
+        if noteSgData_taskValues_list[2] :
+            if noteSgData_taskValues_list[2]["tasks"] :
+                from_subjectTaskStr = noteSgData_taskValues_list[2]["tasks"][0]["name"]
+        elif noteSgData_taskValues_list[0]["tasks"]:
+           from_subjectTaskStr = noteSgData_taskValues_list[0]["tasks"][0]["name"]
+
+        newNote = {} 
+        newNote["subject"] = noteSgData_taskValues_list[0]["subject"]
+        if self.sg_userDict :
+            newNote["subject"] = noteSgData_taskValues_list[0]['shotCode'] + " " + subjectTaskStr + "'s note spawned from " + from_subjectTaskStr + " by " +self.sg_userDict["name"] 
+        else :
+            newNote["subject"] = noteSgData_taskValues_list[0]['shotCode'] + " " + subjectTaskStr + "'s note spawned from " + from_subjectTaskStr
+
+
+
+        newNote["sg_status_list"] = "opn" #noteSgData_taskValues_list[0]["sg_status_list"]
+        newNote["tag_list"] = noteSgData_taskValues_list[0]["tag_list"]
+        newNote["sg_note_type"] = noteSgData_taskValues_list[0]["sg_note_type"]
+        
+        if sg_task :
+            newNote["tasks"] =  [sg_task]
+        
+        if noteSgData_taskValues_list[2] :
+            newNote["note_links"] = [ self.getNote_link( noteSgData_taskValues_list[2]["id"] ) ]
+        else : 
+            newNote["note_links"] = [ self.getNote_link( noteSgData_taskValues_list[0]["id"] ) ]
+
+
+        newNote["user"] = noteSgData_taskValues_list[0]["user"]
+        newNote["content"] = noteSgData_taskValues_list[0]["content"]
+        newNote["project"] =  {'type' : "Project" , 'id' : self.project }
+ 
+        resultNote =  self.sg.create("Note", newNote) #  ["sg_status_list","tag_list","sg_note_type","tasks", "subject", "created_at", "user", "content"]   ) 
+        #resultNote.update({"shotCode" : noteSgData_taskValues_list[0]["shotCode"] , "shotId" : noteSgData_taskValues_list[0]["shotId"] } )
+
+
+        projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
+        filterCode = ["code" , "is", "link_%i"%noteSgData_taskValues_list[0]["shotId"] ]
+
+        noteEntityFilter = None
+        if noteSgData_taskValues_list[2] :
+            noteEntityFilter = ["sg_note", "is", noteSgData_taskValues_list[2] ]
+        else :
+            noteEntityFilter = ["sg_note", "is", noteSgData_taskValues_list[0] ]
+
+        
+
+
+        spawnLink = self.sg.find_one("CustomEntity04", [ projectFilter,filterCode, noteEntityFilter ],  ["sg_note_links","sg_note"] )
+
+
+        spawnedNoteList = [resultNote]
+
+        refresh_id_list = []
+        if spawnLink :
+            refresh_id_list.append(spawnLink["sg_note"]["id"])
+
+            spawnedNoteList.extend(spawnLink["sg_note_links"])
+            spawnLink = self.sg.update("CustomEntity04",spawnLink["id"], {"sg_note_links": spawnedNoteList} ) 
+
+        else :
+            spawnLink = self.sg.create("CustomEntity04", {"code" : "link_%i"%noteSgData_taskValues_list[0]["shotId"], "sg_note":noteSgData_taskValues_list[0], "sg_note_links" : [resultNote], "project" : {'type' : "Project" , 'id' : self.project } }, ["sg_note", "sg_note_links"]   )
+            refresh_id_list.append(spawnLink["sg_note"]["id"])
+
+        for spawned_note in spawnLink["sg_note_links"] :
+            refresh_id_list.append(spawned_note["id"])
+
+        if not resultNote['id'] in refresh_id_list :
+              refresh_id_list.append(resultNote['id'])
+        sgDataShot = {"id" : noteSgData_taskValues_list[0]["shotId"] , "code" : noteSgData_taskValues_list[0]["shotCode"] , "getOnly_Notes" : refresh_id_list }  
+
+        self.queue.put( [1, u"queryNotes"  , sgDataShot, None ] ) 
 
 
 

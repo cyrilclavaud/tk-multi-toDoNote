@@ -21,6 +21,30 @@ import utils
 from utils import *
 
 
+class my_textEdit(QtGui.QTextEdit) :
+    
+    def __init__(self, text, editable = True, parent = None) :
+
+        QtGui.QTextEdit.__init__(self, text, parent)
+        if editable :
+            self.setReadOnly(True);
+            self.setFrameStyle(QtGui.QFrame.NoFrame);
+            pal = QtGui.QPalette()
+            pal.setColor(QtGui.QPalette.Base, QtCore.Qt.transparent);
+            self.setPalette(pal)
+         
+            self.setLineWrapMode(QtGui.QTextEdit.WidgetWidth);
+            self.setWordWrapMode(QtGui.QTextOption.WrapAnywhere);
+
+            self.document().documentLayout().documentSizeChanged.connect(self.adjustMinimumSize) 
+     
+
+    def adjustMinimumSize(self, size) :
+    
+        self.setMinimumHeight(size.height() + 2 * self.frameWidth())
+    
+
+
 class toggleBtn(QtGui.QPushButton) :
     def __init__(self, label, parent = None):
         QtGui.QPushButton.__init__(self,  parent)
@@ -35,13 +59,14 @@ class loadingWidget(QtGui.QWidget) :
         QtGui.QWidget.__init__(self, parent)
          
         # Load the file into a QMovie
+        intSize = 50
         self.movie = QtGui.QMovie(getRessources( "preloader_%i.gif"%intSize), QtCore.QByteArray(), self)
          
         size = self.movie.scaledSize()
         self.setGeometry(intSize, intSize, size.width(), size.height())
 
          
-        self.movie_screen = QtGui.QLabel()
+        self.movie_screen = QtGui.QLabel( parent = self)
         # Make label fit the gif
         #self.movie_screen.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         self.movie_screen.setAlignment(QtCore.Qt.AlignLeft)
@@ -78,7 +103,7 @@ class versionWidgetCombo(QtGui.QWidget) :
         self.layout = QtGui.QHBoxLayout()
         self.layout.setContentsMargins(0,0,0,0)
 
-        titleLabel = QtGui.QLabel("Create Note")
+        titleLabel = QtGui.QLabel("Create Note" ,  parent = self )
         #titleLabel.setStyleSheet("QLabel { background-color : red; color : blue; }");
         font = QtGui.QFont("" , 10 , QtGui.QFont.Bold )
         titleLabel.setFont(font)
@@ -88,8 +113,8 @@ class versionWidgetCombo(QtGui.QWidget) :
         self.masterLayout.addLayout(self.layout)
 
 
-        self.pic= loadingWidget() 
-        #self.pic.setMaximumWidth(50)
+        self.pic= loadingWidget(  parent = self ) 
+        # ####self.pic.setMaximumWidth(50)
 
         
 
@@ -101,13 +126,13 @@ class versionWidgetCombo(QtGui.QWidget) :
 
        
         self.versionQtCombo = QtGui.QComboBox( )
-        self.nameQt = QtGui.QLabel("")
-        self.userQt = QtGui.QLabel("")
-        self.dateQt = QtGui.QLabel("" )
+        self.nameQt = QtGui.QLabel("", parent = self)
+        self.userQt = QtGui.QLabel("", parent = self)
+        self.dateQt = QtGui.QLabel("", parent = self )
 
         comboLayout = QtGui.QHBoxLayout()
         comboLayout.setContentsMargins(0,0,0,0)
-        comboLayout.addWidget( QtGui.QLabel("Link to version : "))
+        comboLayout.addWidget( QtGui.QLabel("Link to version : " , parent = self ))
         comboLayout.addWidget( self.versionQtCombo,QtCore.Qt.AlignLeft )
 
         infoLayout.addLayout( comboLayout )
@@ -138,7 +163,7 @@ class versionWidgetCombo(QtGui.QWidget) :
             self.dateQt.setText("Created : None" )
 
             self.pic.setParent(None)
-            self.pic = PicButton( getRessources( "empty.png"),200,200, overImageName = None)
+            self.pic = PicButton( getRessources( "empty.png"),50,50, overImageName = None)
             #self.pic.setMaximumWidth(2000)
             self.layout.addWidget(self.pic,QtCore.Qt.AlignLeft )
         else :
@@ -180,7 +205,7 @@ class versionWidgetCombo(QtGui.QWidget) :
     def setOnLoading(self):
         if self.pic :
             self.pic.setParent(None)
-        self.pic = loadingWidget()
+        self.pic = loadingWidget( parent = self )
         self.pic.setMaximumWidth(50)
         self.layout.addWidget(self.pic,QtCore.Qt.AlignLeft )
     
@@ -253,13 +278,13 @@ class versionWidget(QtGui.QWidget) :
         self.setLayout(testLayout)
 
 
-        pic =   PicButton(versionData["downloadedImage"],200,200, overImageName = "play.png",  doStart=True)
+        pic =   PicButton(versionData["downloadedImage"],200,200, overImageName = "play.png",  doStart=True ,  parent = self )
         pic.setMaximumWidth(200)
         pic.SIGNAL_imageClicked.connect(self.play_pathToMovie)
 
 
         if versionData.has_key("Title") :
-            titleLabel = QtGui.QLabel(versionData["Title"] )
+            titleLabel = QtGui.QLabel(versionData["Title"] ,  parent = self )
             titleLabel.setAlignment(QtCore.Qt.AlignCenter)
             testLayout.addWidget(titleLabel)
         pic.setAlignment(QtCore.Qt.AlignCenter)
@@ -302,7 +327,7 @@ class PicButton(QtGui.QLabel):
     SIGNAL_imageClicked = _signal(object)
 
     @decorateur_try_except
-    def __init__(self, imageFileName, x = 100, y = 100 , overImageName = "pencil.png" , doStart=False ,parent=None):
+    def __init__(self, imageFileName, x = 100, y = 100 , overImageName = "pencil.png" , doStart=False , parent=None):
         super(PicButton, self).__init__(parent)
         self.do_on_hover  = True 
         self.isNullPixmap = True 
