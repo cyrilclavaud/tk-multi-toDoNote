@@ -40,7 +40,6 @@ class StgkStarterApp(tank.platform.Application):
         self.engine.register_command("ToDo", menu_callback)
 
 
-        self.log_info("trying to startup")
 
 
         if not hasattr(tank, '_tk_multi_ToDoNoteApp_shown'):
@@ -50,7 +49,7 @@ class StgkStarterApp(tank.platform.Application):
             if self.settings.has_key('launch_at_startup') :
                 launchAtStartup = self.get_setting('launch_at_startup')  
                 if launchAtStartup  and not  self.engine.name in ["tk-shotgun", "tk-desktop", "tk-shell"] :
-                    print "Launch at start up"               
+                    print "Launch toDo note at start up"               
                     app_payload.dialog.show_dialog(self)
 
 
