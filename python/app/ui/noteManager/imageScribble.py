@@ -37,7 +37,7 @@ class ScribbleArea(QtGui.QWidget):
         
         self.lastPoint = QtCore.QPoint()
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def openImage(self, fileName):
         loadedImage = QtGui.QImage()
         if not loadedImage.load(fileName):

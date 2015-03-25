@@ -20,14 +20,155 @@ from utils import *
 
 
 
+class comboFilterWidget3(QtGui.QComboBox):
+    SIGNAL_currentIndexChanged = _signal(object, object)
+    SIGNAL_filterResultEmpty = _signal(object)
+
+
+    def __init__(self, filterLineWidget = None , filterTasksAssigneesLineWidget = None  , parent = None ) :
+
+        super(comboFilterWidget3, self).__init__(parent )
+
+        self.filterWidget = filterLineWidget 
+        self.filterTasksAssigneesLineWidget = filterTasksAssigneesLineWidget 
+
+        self.currentIdx = 0
+
+        self.filterWidget.widget.textChanged.connect(self.filterItemList)
+        self.filterTasksAssigneesLineWidget.widget.textChanged.connect( self.filterItemList )
+
+        self.drawComplex = True
+        self.itemList = []
+        self.filteredItemList = []
+
+        self.currentIndexChanged.connect(self.computeNewIndex)
+
+
+    def mousePressEvent(self, event ):
+        if self.drawComplex :
+            QtGui.QComboBox.mousePressEvent(self, event ) 
+        return
+
+    def computeNewIndex(self, test = None ) :
+
+        currentItemText = str(self.currentText())
+        idx = 0
+        for  item in self.itemList :
+            if currentItemText == item["code"] :
+                self.currentIdx = idx
+                break
+            idx+=1
+
+
+        self.SIGNAL_currentIndexChanged.emit(self.currentIdx, True)
+
+    def currentIndex(self):
+        currentItemText = str(self.currentText())
+        idx = 0
+        for  item in self.itemList :
+            if currentItemText == item["code"] :
+                self.currentIdx = idx
+                break
+            idx+=1
+            
+        return self.currentIdx
+
+
+    def fillItem(self, itemList = None ) :
+        self.blockSignals(True)
+        if itemList :
+            self.itemList = itemList
+        else :
+            self.clear()
+
+
+
+        self.filteredItemList = []
+
+        assignedToTxt = self.filterTasksAssigneesLineWidget.widget.text()
+        if not isinstance(assignedToTxt, unicode):
+            assignedToTxt = unicode(assignedToTxt.toUtf8() , "utf-8" )
+
+
+        txtFilter = self.filterWidget.widget.text()
+        if not isinstance(txtFilter, unicode):
+            txtFilter = unicode(txtFilter.toUtf8() , "utf-8" ) 
+
+
+
+        if txtFilter == ""  and assignedToTxt == "" :
+            pass #print "---> nothing to Filter"
+        else :
+            for item in self.itemList :
+                if txtFilter.upper() in item["code"].upper()  :# and ( assignedToTxt != ""  ):
+                    if  assignedToTxt != "" :
+                        if assignedToTxt.upper() in " ".join( item["sgAvailableAssignees"] ).upper():
+                            self.filteredItemList.append( item )                            
+                    else :
+                        self.filteredItemList.append( item ) 
+
+        if not  self.filteredItemList :
+            for item in self.itemList :
+                self.addItem( item["code"])
+        else :
+            for item in self.filteredItemList :
+                self.addItem( item["code"])
+
+
+        if self.count() == 1 :
+            self.drawComplex = False
+        else : 
+            self.drawComplex = True
+        
+
+        self.blockSignals(False)
+        
+        if txtFilter != ""  or assignedToTxt != ""  :
+            if not self.filteredItemList :
+                self.SIGNAL_filterResultEmpty.emit(True)
+            else :
+                self.SIGNAL_filterResultEmpty.emit(False)
+        else :
+            self.SIGNAL_filterResultEmpty.emit(False)
+        
+
+
+        if not itemList :
+            currentItemText = str(self.currentText())
+            idx = 0
+            for  item in self.itemList :
+                if currentItemText == item["code"] :
+                    self.currentIdx = idx
+                    break
+                idx+=1
+            self.SIGNAL_currentIndexChanged.emit(self.currentIdx, False)
+
+        self.repaint()
+
+    def filterItemList(self, test  ) :
+        self.fillItem(itemList = None)
+
+
+    def paintEvent(self   , paintEvent):
+        painter = QtGui.QStylePainter(self)
+        opt = QtGui.QStyleOptionComboBox()
+        self.initStyleOption(opt)
+        if self.drawComplex :
+            painter.drawComplexControl(QtGui.QStyle.CC_ComboBox, opt)
+
+        painter.drawControl(QtGui.QStyle.CE_ComboBoxLabel, opt)
+
+
 class comboFilterWidget2(QtGui.QWidget):
 
 
     SIGNAL_currentIndexesChanged = _signal(object)
+    SIGNAL_TaskcurrentIndexesChanged = _signal(object)
 
     def __init__(self, typeDict , entriesDictList , showLabel = True, multiCheckable = False, parent = None ):
         super(comboFilterWidget2, self).__init__(parent )
  
+        self.drawComplex = True
 
         layout = QtGui.QHBoxLayout()
         layout.setContentsMargins(0,0,0,0)
@@ -38,22 +179,24 @@ class comboFilterWidget2(QtGui.QWidget):
 
  
         label = QtGui.QLabel(  parent = self )
-        icon  = QtGui.QLabel( parent = self )
+        
 
         self.multiCheckable = multiCheckable 
 
         if showLabel :
             label.setText( typeDict["name"] )
-            
-            icon.setPixmap(  QtGui.QPixmap(getRessources(typeDict["icon"])).scaled ( 16, 16, QtCore.Qt.KeepAspectRatio )  )
-            icon.setMaximumWidth(16)
 
-            layout.addWidget(label)
-            layout.addWidget(icon)
+            if typeDict["icon"] :
+                icon  = QtGui.QLabel( parent = self )
+                icon.setPixmap(  QtGui.QPixmap(getRessources(typeDict["icon"])).scaled ( 16, 16, QtCore.Qt.KeepAspectRatio )  )
+                icon.setMaximumWidth(16)
+
+            
+                layout.addWidget(icon)
             if not typeDict["name"] :
                 label.hide()
                 layout.setSpacing(0)
-    
+            layout.addWidget(label)
         self.widget = QtGui.QComboBox( parent = self )
         self.widget.setItemDelegate( QtGui.QItemDelegate(self ))
 
@@ -86,9 +229,9 @@ class comboFilterWidget2(QtGui.QWidget):
                         self.widget.addItem(  entryDict["text"]   )
                 
                 if self.widget.count == 1 :
-                    self.widget.setEnabled(False)
+                    #-self.widget.setEnabled(False)
 
-
+                    self.drawComplex = False
 
             else :
                 if entryDict["icon"] :
@@ -134,12 +277,23 @@ class comboFilterWidget2(QtGui.QWidget):
             self.menuOpt = self.getDisplayOpt()
             
         elif self.widget.count() == 1 :
-            self.widget.setEnabled(False)
-
+            
+            #-self.widget.setEnabled(False)
+            self.drawComplex = False
 
         layout.addWidget(self.widget)
         if self.multiCheckable :        
             self.widget.currentIndexChanged.connect(self.sendCheckedIndexes)
+        else :
+            self.widget.paintEvent = self.single_widget_paintEvent
+            self.widget.mousePressEvent  = self.widget_mousePressEvent
+
+
+
+    def widget_mousePressEvent(self, event ):
+        if self.drawComplex :
+            QtGui.QComboBox.mousePressEvent(self.widget, event ) 
+        return
 
 
     def eventFilter(self, obj, event) :
@@ -148,10 +302,20 @@ class comboFilterWidget2(QtGui.QWidget):
         if ( event.type() == QtCore.QEvent.MouseButtonRelease and obj == self.widget.view().viewport() ) :
             self.widget.repaint()
             return True
-        
+
         return False
 
     
+
+    def single_widget_paintEvent(self, paintEvent):
+        painter = QtGui.QStylePainter(self.widget)
+        opt = QtGui.QStyleOptionComboBox()
+        self.widget.initStyleOption(opt)
+
+        if self.drawComplex :
+            painter.drawComplexControl(QtGui.QStyle.CC_ComboBox, opt)
+
+        painter.drawControl(QtGui.QStyle.CE_ComboBoxLabel, opt)
 
     def widget_paintEvent(self, paintEvent):
 
@@ -171,6 +335,7 @@ class comboFilterWidget2(QtGui.QWidget):
 
 
         painter.drawComplexControl(QtGui.QStyle.CC_ComboBox, opt)
+
         painter.drawControl(QtGui.QStyle.CE_ComboBoxLabel, opt)
 
 
@@ -263,7 +428,7 @@ class comboFilterWidget2(QtGui.QWidget):
         else :
             return self.retrieveValueFromName( str(self.widget.currentText()) ) 
     
-    @decorateur_try_except
+    ## @decorateur_try_except
     def retrieveIconFromValue(self, value ) :
         for entriesDict  in  self.entriesDictList :
             if value in entriesDict["values"] :
@@ -279,7 +444,7 @@ class comboFilterWidget2(QtGui.QWidget):
             idx  += 1
         return 0
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def retrieveValueFromName(self, name):
         for entriesDict  in  self.entriesDictList :
             if name in entriesDict["values"] :
@@ -289,7 +454,7 @@ class comboFilterWidget2(QtGui.QWidget):
 
 
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def retrieveNameFromValue(self, value) :
         #return value
 
@@ -298,30 +463,27 @@ class comboFilterWidget2(QtGui.QWidget):
                 return  entriesDict["text"]
         return value
     
-    @decorateur_try_except
+    ## @decorateur_try_except
     def retrieveDictFromSelection(self):
 
         return self.retrieveValueFromName(self.widget.currentText())
     
-    @decorateur_try_except
+    ## @decorateur_try_except
     def retrieveDict(self):
         import copy
         return copy.deepcopy( self.typeDict ) , copy.deepcopy( self.entriesDictList[1:] )
 
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def setFromValue(self, name ) :
         idx = 0
         idx = self.widget.findText(name)
         self.widget.setCurrentIndex(idx)
         
-    @decorateur_try_except
+    ## @decorateur_try_except
     def setMyCurrentIndex(self, index ):
 
-
         self.widget.setCurrentIndex(0) 
-        self.widget.setEnabled(True)
-
 
 
 
@@ -356,15 +518,28 @@ class comboFilterWidget2(QtGui.QWidget):
                 indexesList.append(idx)
             idx += 1
 
+        
         if not indexesList :
             return range(len( self.entriesDictList )  )
         
         return indexesList
 
-    @decorateur_try_except
+    def getTaskCheckedIndexes(self ):
+        indexesList = []
+        idx = 0
+        for dictEntries in  self.entriesDictList :
+            if dictEntries["checked"] :
+                indexesList.append(idx)
+            idx += 1
+
+                
+        return indexesList
+
+    ## @decorateur_try_except
     def sendCheckedIndexes(self, index):
 
         self.SIGNAL_currentIndexesChanged.emit( self.getCheckedIndexes() )
+        self.SIGNAL_TaskcurrentIndexesChanged.emit( self.getTaskCheckedIndexes() )
 
 
     def currentCheckedIndexes(self):
@@ -374,7 +549,7 @@ class comboFilterWidget2(QtGui.QWidget):
         else :
             return checkedIndexes[0]
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def getMyValuesFromIndexes(self, indexList) :
         idx = 1
         valueLists = []
@@ -386,39 +561,67 @@ class comboFilterWidget2(QtGui.QWidget):
             idx+=1
         return valueLists
 
-    @decorateur_try_except
-    def setMyCurrentFromIndexes(self, indexList ):
+    ## @decorateur_try_except
+    def setMyCurrentFromIndexes(self, indexList, availableTaskList = None ):
 
+
+      
         self.widget.blockSignals(True)
         self.widget.clear()
 
         idx = 1
         for entryDict in self.entriesDictList :
             if idx in  indexList :
-                if entryDict["icon"] :
-                    self.widget.addItem( QtGui.QIcon(getRessources( entryDict["icon"] ) ), entryDict["text"]  )
+                if availableTaskList == None : 
+                    if entryDict["icon"] :
+                        self.widget.addItem( QtGui.QIcon(getRessources( entryDict["icon"] ) ), entryDict["text"]  )
+                    else :
+                        self.widget.addItem(  entryDict["text"]   )
                 else :
-                    self.widget.addItem(  entryDict["text"]   )
+
+
+                    if len(availableTaskList) == 0 or entryDict["text"] == "NoTask"  :
+                        if "NoTask" in entryDict["values"] :
+                            if entryDict["icon"] :
+                                self.widget.addItem( QtGui.QIcon(getRessources( entryDict["icon"] ) ), entryDict["text"]  )
+                            else :
+                                self.widget.addItem(  entryDict["text"]   )
+                    else :
+                        test = False
+                        for availableTask in availableTaskList :
+                            if availableTask in entryDict["values"] :
+                                test = True
+
+                        if test :
+                            if entryDict["icon"] :
+                                self.widget.addItem( QtGui.QIcon(getRessources( entryDict["icon"] ) ), entryDict["text"]  )
+                            else :
+                                self.widget.addItem(  entryDict["text"]   )
             idx+=1
+
+
+        if not self.widget.count() :
+            self.widget.addItem( QtGui.QIcon(getRessources(  self.entriesDictList[-1]["icon"] ) ),  self.entriesDictList[-1]["text"]  )
 
         self.widget.blockSignals(False)
 
 
-        self.widget.currentIndexChanged.emit(0)
+
         
         if self.widget.count()==1:
-            self.widget.setEnabled(False)
-
-
+            self.drawComplex = False
         else :
-            self.widget.setEnabled(True)
-            self.show()
+            self.drawComplex = True
         
-
+        
+        QtGui.QApplication.processEvents()
+        self.widget.repaint()
+        
+        self.widget.currentIndexChanged.emit(0)
 
 class lineEditFilterWidget(QtGui.QWidget) :
 
-    #@decorateur_try_except
+    ### @decorateur_try_except
     def __init__(self, typeDict , parent = None ):
 
         super(lineEditFilterWidget, self).__init__(parent )
@@ -428,12 +631,14 @@ class lineEditFilterWidget(QtGui.QWidget) :
         self.setLayout(layout)
 
         label = QtGui.QLabel( typeDict["name"] )
-        icon  = QtGui.QLabel()
-        icon.setPixmap(  QtGui.QPixmap(getRessources(typeDict["icon"])).scaled ( 16, 16, QtCore.Qt.KeepAspectRatio )  )
+        icon = None
+        if typeDict["icon"] :
+            icon  = QtGui.QLabel()
+            icon.setPixmap(  QtGui.QPixmap(getRessources(typeDict["icon"])).scaled ( 16, 16, QtCore.Qt.KeepAspectRatio )  )
 
         self.widget = QtGui.QLineEdit()
-
-        layout.addWidget(icon)
+        if icon :
+            layout.addWidget(icon)
         layout.addWidget(label)
 
         layout.addWidget(self.widget)
@@ -457,9 +662,13 @@ class taskLinks(QtGui.QWidget ):
         layout.setSpacing(0)
         self.setLayout(layout)
  
+        self.isSelected = False
         self.mainLabel = None
         self.normalStyle = None
+        self.litStyle = None
         self.highlightStyle = None 
+        self.labelList = []
+
 
         test = "border-radius: 3px 3px ; "
         borderType = "outset "
@@ -493,12 +702,12 @@ class taskLinks(QtGui.QWidget ):
                 if idx == 0 : # [TaskName]
                     colorLabel = QtGui.QLabel( parent = self)
                     self.mainLabel = colorLabel
-
+                    self.labelList.append(colorLabel)
                     colorLabel.setAutoFillBackground(True)
                     colorLabel.setMaximumHeight(16)
                     font = colorLabel.font()
                     font.setPointSize(9);
-                    font.setWeight( QtGui.QFont.Bold )
+                    #font.setWeight( QtGui.QFont.Bold )
                     
                     colorLabel.setFont(font)
                     colorLabel.setText(a["name"])       
@@ -514,12 +723,12 @@ class taskLinks(QtGui.QWidget ):
                     
                     borderType = " none "
                     styleAlign =  " qproperty-alignment: AlignCenter; "
-                    style = "QLabel {  " + styleAlign + foreColor + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
+                    style = "QLabel {  " + styleAlign + foreColor + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 1px " + borderType + " rgba( 30,30,30, 255) ;}"
                     colorLabel.setStyleSheet(style)
 
                     self.normalStyle = style
-                    self.highlightStyle = "QLabel {  " + styleAlign + " color :rgb(48,226,227) ; " + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
-                   
+                    self.highlightStyle = "QLabel {  " + styleAlign + " color :rgb(48,226,227) ; " + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 1px " + borderType + " rgba( 30,30,30, 255) ;}"
+                    self.litStyle = "QLabel {  " + styleAlign + " color :rgb(230,230,230) ; " + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 1px " + borderType + " rgba( 30,30,30, 255) ;}"
                 
                 else : 
                     colorLabel = QtGui.QPushButton( parent = self)
@@ -530,11 +739,11 @@ class taskLinks(QtGui.QWidget ):
                     colorLabel.leaveEvent = lambda event, noteId = a['id'], parentTree = parent : self.my_leaveEvent(event, noteId, parentTree) 
 
                     colorLabel.setAutoFillBackground(True)
-                    colorLabel.setMaximumHeight(15)
+                    colorLabel.setMaximumHeight(13)
                     colorLabel.setFlat(True)
                     font = colorLabel.font()
                     font.setPointSize(8);
-                    font.setWeight( QtGui.QFont.Bold )
+                    #font.setWeight( QtGui.QFont.Bold )
                     
                     colorLabel.setFont(font)
                     colorLabel.setText(a["name"])       
@@ -555,7 +764,7 @@ class taskLinks(QtGui.QWidget ):
                         backGroundColorStyle = " background-color : rgba( 35, 35, 35, 255 ) ; "
 
                     hoverStyle = " QPushButton:hover{  border: 1px solid rgb(48,226,227);} "
-                    style = "QPushButton {  " + foreColor + backGroundColorStyle + test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
+                    style = "QPushButton {  " + foreColor + backGroundColorStyle + test +" border: 1px " + borderType + " rgba( 30,30,30, 255) ;}"
                     colorLabel.setStyleSheet(style + hoverStyle)
 
             else :
@@ -575,10 +784,11 @@ class taskLinks(QtGui.QWidget ):
                     statusLabel = QtGui.QLabel( parent = self)
                     statusLabel.setText(a["name"])
                     self.mainLabel = statusLabel
+                    self.labelList.append(statusLabel)
 
                     font = statusLabel.font()
                     font.setPointSize(9);
-                    font.setWeight( QtGui.QFont.Bold )
+                    #font.setWeight( QtGui.QFont.Bold )
                     statusLabel.setFont(font)
                     underLayout.addWidget(statusLabel )
 
@@ -595,19 +805,19 @@ class taskLinks(QtGui.QWidget ):
 
                     borderType = " none "
                     styleAlign =  " "
-                    style = "QLabel {  " + styleAlign + foreColor + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
+                    style = "QLabel {  " + styleAlign + foreColor + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 1px " + borderType + " rgba( 30,30,30, 255) ;}"
                     statusLabel.setStyleSheet(style)
                 
                     self.normalStyle = style
                     self.highlightStyle = "QLabel {  " + styleAlign + " color :rgb(48,226,227) ; " + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
-                   
+                    self.litStyle =  "QLabel {  " + styleAlign + " color :rgb(230,230,230) ; " + "background-color : rgba( 71,101,125, 0 ) ; "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
 
                 else :
                     
                     colorLabel = QtGui.QPushButton( parent = self)
                     colorLabel.setAutoFillBackground(True)
                     colorLabel.setMaximumWidth(10)
-                    colorLabel.setMaximumHeight(15)
+                    colorLabel.setMaximumHeight(13)
 
                     fct = lambda checked = False, noteId =  a['id'], taskName = a["name"] : parent.selectNote_from_id( noteId, taskName )
                     colorLabel.clicked.connect(fct)
@@ -617,7 +827,7 @@ class taskLinks(QtGui.QWidget ):
 
                     statusLabel = QtGui.QLabel( parent = self)
                     statusLabel.setText(a["name"])
-
+                    self.labelList.append(statusLabel)
 
                     font = statusLabel.font()
                     font.setPointSize(8);
@@ -639,7 +849,7 @@ class taskLinks(QtGui.QWidget ):
                         backGroundColorStyle = " background-color : rgba( 35, 35, 35, 255 ) ; "
 
                     hoverStyle = " QPushButton:hover{  border: 1px solid rgb(48,226,227);} "
-                    style = "QPushButton { "+ backGroundColorStyle + " "+test +" border: 2px " + borderType + " rgba( 30,30,30, 255) ;}"
+                    style = "QPushButton { "+ backGroundColorStyle + " "+test +" border: 1px " + borderType + " rgba( 30,30,30, 255) ;}"
                     colorLabel.setStyleSheet(style + hoverStyle)
                     
 
@@ -665,7 +875,10 @@ class taskLinks(QtGui.QWidget ):
             self.mainLabel.setStyleSheet(self.highlightStyle)
 
         else :
-            self.mainLabel.setStyleSheet(self.normalStyle)
+            if self.isSelected :
+                self.mainLabel.setStyleSheet(self.litStyle)
+            else :
+                self.mainLabel.setStyleSheet(self.normalStyle)
 
 
     def my_enterEvent(self, event , noteID, parentTree ) :
@@ -680,15 +893,22 @@ class taskLinks(QtGui.QWidget ):
         for item in items :
             item.taskLinksWidget.setMyLabelColor(False)
 
-
+    def lit(self, isSelected):
+        self.isSelected = isSelected
+        for lab in self.labelList :
+            if isSelected :
+                lab.setStyleSheet(self.litStyle)
+            else :
+                lab.setStyleSheet(self.normalStyle) 
 
 class noteWidget(QtGui.QTreeWidgetItem) :
 
-   #@decorateur_try_except
-    def __init__(self, parent, sgData, taskFilterWidget, filterWidget, typeFilterWidget,  userNameFilterWidget, contentFilterWidget, entityAssignedFilterWidget  ):
+   ### @decorateur_try_except
+    def __init__(self, parent, sgData, taskFilterWidget, filterWidget, typeFilterWidget,  userNameFilterWidget, contentFilterWidget, entityAssignedFilterWidget, shotAssetFilterWidget  ):
 
         super(noteWidget, self).__init__(parent )
 
+        self.statusColor = None
         #print sgData
         self.taskParsedName = "NoTask"
         self.taskLinksWidget = None
@@ -698,6 +918,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         self.contentFilterWidget = contentFilterWidget
         self.entityAssignedFilterWidget = entityAssignedFilterWidget
         self.taskFilterWidget = taskFilterWidget
+        self.shotAssetFilterWidget = shotAssetFilterWidget
 
         content = "None"
         if sgData["content"] :
@@ -744,8 +965,8 @@ class noteWidget(QtGui.QTreeWidgetItem) :
 
         if not childNoteTasks :
             self.setText(1, self.taskFilterWidget.retrieveNameFromValue( masterTaskName ) )
-            font = QtGui.QFont("" , 9 , QtGui.QFont.Bold )
-            self.setFont(1, font)
+            #font = QtGui.QFont("" , 9 , QtGui.QFont.Bold )
+            #self.setFont(1, font)
         else :
             self.taskLinksWidget =  taskLinks( childNoteTasks , parent = self.treeWidget() ) 
             self.treeWidget().setItemWidget( self, 1 , self.taskLinksWidget)
@@ -765,6 +986,12 @@ class noteWidget(QtGui.QTreeWidgetItem) :
 
         self.textBox = False
         self.editing_text = None
+
+    def litTaskLink(self):
+
+        if self.taskLinksWidget :
+            self.taskLinksWidget.lit(self.isSelected())
+
 
     def getSpawnedFrom(self) :
         if self.sgData.has_key("spawnedDict") :
@@ -805,7 +1032,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
     def setEditableMode(self, editable) :
         self.setHidden(True)
         if editable :
-            print "edit"
+
             self.textBox = QtGui.QTextEdit()
             self.textBox.setPlainText(self.text(0) )
             self.treeWidget().setItemWidget( self, 0 , self.textBox )
@@ -813,7 +1040,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
             self.setText(0, "")
         
         else :
-            print "close"
+
 
             if self.textBox :
                 text = self.textBox.toPlainText()
@@ -821,13 +1048,13 @@ class noteWidget(QtGui.QTreeWidgetItem) :
                 self.setText( 0,  text )
 
                 if self.editing_text != self.text(0) :
-                    print "change"
+
                     if not isinstance(text, unicode):
                         text =  unicode ( text.toUtf8(), "utf-8" )
 
                     self.treeWidget().SIGNAL_updateNoteContent.emit( [text, self.sgData['id'] ] )
-                else :
-                    print "no change"
+
+
         self.setHidden(False)
 
 
@@ -875,6 +1102,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
 
         if self.sgData["sg_status_list"] == "opn" : # bleur
             backColor = QtGui.QColor(115,195,255, 100)
+
             self.setMultiColor(foreColor, backColor )
 
             if str(self.text(11)) == "False" :
@@ -884,6 +1112,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
 
         elif self.sgData["sg_status_list"] == "ip" : # orange FFA500
             backColor = QtGui.QColor(250,220,122, 160)
+
             foreColor = QtGui.QBrush( QtGui.QColor(60,60,30) )
             self.setMultiColor(foreColor, backColor )
 
@@ -895,6 +1124,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
 
         elif self.sgData["sg_status_list"] == "clsd" : # vert
             backColor = QtGui.QColor(95, 95, 95, 100)
+
             foreColor = QtGui.QBrush( QtGui.QColor(150,150,150) )
             self.setMultiColor(foreColor, backColor )
 
@@ -905,22 +1135,23 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         else :
             self.setMultiColor(foreColor, backColor )
 
+        self.statusColor = backColor
 
 
 
-
-    #@decorateur_try_except
+    ### @decorateur_try_except
     def updateData(self, dataDict ):
         self.sgData.update( dataDict )
         self.set_my_bacgroundColor()
         self.do_hidding()
 
-    @decorateur_try_except
+    
     def __lt__(self, otherItem):
         column = self.treeWidget().sortColumn()
 
 
         if column == 0 :
+
             orig  = self.sgData["sg_status_list"]      + str(self.sgData["created_at"])
             other = otherItem.sgData["sg_status_list"] + str(otherItem.sgData["created_at"])
             return orig < other
@@ -956,6 +1187,23 @@ class noteWidget(QtGui.QTreeWidgetItem) :
 
 
 
+    def checkFilterShotAsset(self) :
+        filterText = self.shotAssetFilterWidget.getText()
+
+
+        text = self.text(6)
+        if not isinstance(text, unicode):
+            text = unicode(self.text(6).toUtf8() , "utf-8" ) 
+
+        if not filterText :
+            return False
+        else :
+            if text.upper().find( filterText.upper() ) +1 :
+                return False
+            elif text.find( filterText )  + 1 :
+                return False
+            else :
+                return True
 
 
     def checkFilterStatus(self) :
@@ -1036,7 +1284,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
             else :
                 return True
 
-    #@decorateur_try_except
+    ### @decorateur_try_except
     def do_hidding(self, getState = False) :
 
         status  = self.checkFilterStatus()
@@ -1044,20 +1292,33 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         content = self.checkFilterContent()
         assignedTo = self.checkFilterAssigned()
         task = self.checkFilterTasks()
+        shot = self.checkFilterShotAsset()
 
-        if not status and not user and not content and not assignedTo and not task:
+        if not status and not user and not content and not assignedTo and not task and not shot :
             self.setHidden(False)
             return False
         else :
             self.setHidden(True)
             return True
 
-        
 
+class emptyWidget(QtGui.QTreeWidgetItem):
+    def __init__(self, parent ):
+        super(emptyWidget, self).__init__(parent )
+        self.sgData = None
+
+        self.setText(0, "" )
+        self.setText(10, "EMPTYNOTE" )
+    def __lt__(self, otherItem):
+        if QtCore.Qt.AscendingOrder == self.treeWidget().header().sortIndicatorOrder() :
+        
+            return 0
+        else :
+            return  1
 
 class taskWidget(QtGui.QTreeWidgetItem) :
 
-    #@decorateur_try_except
+    ### @decorateur_try_except
     def __init__(self, parent, sgData, filterWidget ):
 
 
@@ -1065,8 +1326,10 @@ class taskWidget(QtGui.QTreeWidgetItem) :
 
         self.filterWidget = filterWidget
 
-        self.sgData = sgData
+        self.statusColor = QtGui.QColor(85,85,85)
 
+        self.sgData = sgData
+        self.sgData['id'] = 0
         #self.setText(10, "task_%s"%sgData["name"] )
         self.setText(10, "task_dontCarre" )
         
@@ -1090,11 +1353,26 @@ class taskWidget(QtGui.QTreeWidgetItem) :
 
 
         ressources =  ressources.scaled (32, 32, QtCore.Qt.KeepAspectRatio)
-
-        #self.setMysizeHint()
+        
+        self.setMysizeHint()
         self.setIcon(0, QtGui.QIcon(  ressources ) )
         self.setExpanded(True)
         
+
+        backColor = QtGui.QColor(85, 85, 85, 255)
+        self.setBackground(0, backColor)
+        self.setBackground(1, backColor)
+        self.setBackground(2, backColor)
+        self.setBackground(3, backColor)
+        self.setBackground(4, backColor)
+        self.setBackground(5, backColor)
+        self.setBackground(6, backColor)
+        self.setBackground(7, backColor)
+        self.setBackground(8, backColor)
+        self.setBackground(9, backColor)
+
+
+
         self.do_hidding()
 
 
@@ -1111,7 +1389,7 @@ class taskWidget(QtGui.QTreeWidgetItem) :
         self.setSizeHint(8, QtCore.QSize(0,0))
         self.setSizeHint(9, QtCore.QSize(0,0))
 
-    #@decorateur_try_except
+    ### @decorateur_try_except
     def findItems(self, text, method,col) :
         matchItem = []
         for child_idx in range(self.childCount()) :
@@ -1125,12 +1403,23 @@ class taskWidget(QtGui.QTreeWidgetItem) :
         idNoteList = []
         for child_idx in range(self.childCount()) :
             childItem = self.child(child_idx) 
-        
-            idNoteList.append(childItem.sgData["id"])
+            
+            if childItem.sgData :
+                idNoteList.append(childItem.sgData["id"])
 
         return idNoteList
 
     def __lt__(self, otherItem):
+
+        if QtCore.Qt.AscendingOrder == self.treeWidget().header().sortIndicatorOrder() :
+        
+            return 1
+        else :
+            return  0
+
+
+
+
         currentIdx = self.filterWidget.retrieveIndiceFromValue(self.text(0))
         otherIdx = self.filterWidget.retrieveIndiceFromValue(otherItem.text(0) )
 
@@ -1194,6 +1483,16 @@ class sequenceWidget(QtGui.QTreeWidgetItem) :
 
         return matchItem
 
+    def __lt__(self, otherItem):
+
+        #if QtCore.Qt.AscendingOrder == self.treeWidget().header().sortIndicatorOrder() :
+        orig  =  str(self.sgData["type"])+ str(self.sgData["name"])
+        other = str(otherItem.sgData["type"]) + str(otherItem.sgData["name"])
+        if QtCore.Qt.AscendingOrder == self.treeWidget().header().sortIndicatorOrder() :
+            return orig > other
+        else :
+            return orig < other
+
 class assetWidget(QtGui.QTreeWidgetItem) :
 
 
@@ -1202,8 +1501,8 @@ class assetWidget(QtGui.QTreeWidgetItem) :
 
         self.sgData = sgData
 
-        self.setText(10, "assetType_%s"%sgData )
-        self.setText(0, str(sgData)  )
+        self.setText(10, "assetType_%s"%sgData["name"] )
+        self.setText(0, str(sgData["name"])  )
 
         self.setIcon(0, QtGui.QIcon( getRessources(u"asset.png" ) ) )
         self.setExpanded(False)
@@ -1215,6 +1514,17 @@ class assetWidget(QtGui.QTreeWidgetItem) :
 
         return matchItem
 
+    def __lt__(self, otherItem):
+
+        #if QtCore.Qt.AscendingOrder == self.treeWidget().header().sortIndicatorOrder() :
+        orig  =  str(self.sgData["type"])+ str(self.sgData["name"])
+        other = str(otherItem.sgData["type"]) + str(otherItem.sgData["name"])
+        if QtCore.Qt.AscendingOrder == self.treeWidget().header().sortIndicatorOrder() :
+            return orig > other
+        else :
+            return orig < other
+
+
 class shotAssetWidget(QtGui.QTreeWidgetItem) :
     x = 128
     y = 128
@@ -1222,11 +1532,115 @@ class shotAssetWidget(QtGui.QTreeWidgetItem) :
         super(shotAssetWidget, self).__init__(parent )
 
         self.sgData = sgData
-
+        self.sgData["sgAvailableTaskList"] = None
 
 
         self.setText(10, "shotAsset_%i"%sgData["id"]  )
         self.setText(0, str(sgData["code"])  )
+
+
+
+    def do_filterText(self, filterText ) :
+
+        
+        text = self.text(0)
+        if not isinstance(text, unicode):
+            text = unicode(self.text(0).toUtf8() , "utf-8" ) 
+    
+        if not filterText :
+            return False
+        else :
+            if text.upper().find( filterText.upper() ) +1 :
+                return False
+            elif text.find( filterText )  + 1 :
+                return False
+            else :
+                return True
+
+
+    def do_filterAssignees(self, taskAssigneesText) :
+        
+
+        if not self.sgData.has_key("sgAvailableAssignees") :
+            return False
+
+        text = " ".join( self.sgData["sgAvailableAssignees"] )
+        if not isinstance(text, unicode):
+            text = unicode(text , "utf-8" ) 
+ 
+
+        if not taskAssigneesText :
+            return False
+        else :
+            if text.upper().find( taskAssigneesText.upper() ) +1 :
+                return False
+            elif text.find( taskAssigneesText )  + 1 :
+                return False
+            else :
+                return True
+
+    def do_filterTask(self, taskFilterList, taskAssigneesText  ) :
+
+
+
+        if not self.sgData.has_key("sgtaskDictWithAssignees") :
+            return False
+
+        availableTaskList = self.sgData["sgtaskDictWithAssignees"].keys()
+        """
+        if "NoTask"  in taskFilterList :
+            return False
+        """
+
+        if not taskFilterList and not taskAssigneesText :
+            return False
+        else :
+            
+
+            for taskFilter in taskFilterList :
+                
+                if taskFilter == "NoTask" :
+                    if len(taskFilterList)>1 :
+                        pass
+                    else :
+                        return False
+                
+                if taskFilter in availableTaskList :
+                    if not taskAssigneesText :
+                        return False
+                  
+                    text = " ".join( self.sgData["sgtaskDictWithAssignees"][taskFilter] )
+                    if text.upper().find( taskAssigneesText.upper() ) +1 :
+                        return False
+                    else : 
+                        pass
+                
+
+            return True
+
+
+
+    def do_hidding( self, filterText, taskAssigneesText, taskFilterList ) :
+
+
+        shotAssetChecked  = self.do_filterText(filterText)
+        taskChecked = None
+        if taskFilterList :
+            taskChecked = self.do_filterTask(taskFilterList, taskAssigneesText )
+        else :
+            taskChecked = self.do_filterAssignees(taskAssigneesText)
+
+
+
+        if not taskChecked and not shotAssetChecked :
+            self.setHidden(False)
+            return False
+        else :
+            self.setHidden(True)
+            return True
+
+
+
 
 
     def findItems(self, text, method,col) :

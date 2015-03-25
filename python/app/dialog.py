@@ -37,7 +37,7 @@ def show_dialog(app_instance):
 
 
     
-    app_instance.engine.show_dialog("To-Do Note App", app_instance, AppDialog )    
+    app_instance.engine.show_dialog("To Do   Note Manager", app_instance, AppDialog )    
 
     dialog = QtGui.QApplication.activeWindow()
     if dialog :

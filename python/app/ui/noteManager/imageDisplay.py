@@ -23,7 +23,7 @@ class lab(QtGui.QLabel) :
 
 
 class ImageViewer(QtGui.QMainWindow):
-    @decorateur_try_except
+    ## @decorateur_try_except
     def __init__(self,  parent=None):
         super(ImageViewer, self).__init__(parent)
 
@@ -47,6 +47,7 @@ class ImageViewer(QtGui.QMainWindow):
         self.setWindowTitle("Image Viewer")
         self.resize(500, 400)
 
+    ## @decorateur_try_except 
     def setImage(self, image_fullfileName) :
         fileName = image_fullfileName
         if fileName:
@@ -66,6 +67,7 @@ class ImageViewer(QtGui.QMainWindow):
             if not self.fitToWindowAct.isChecked():
                 self.imageLabel.adjustSize()
 
+    ## @decorateur_try_except 
     def open(self):
         fileName = QtGui.QFileDialog.getOpenFileName(self, "Open File",
                 QtCore.QDir.currentPath())
@@ -86,6 +88,7 @@ class ImageViewer(QtGui.QMainWindow):
             if not self.fitToWindowAct.isChecked():
                 self.imageLabel.adjustSize()
 
+    ## @decorateur_try_except 
     def print_(self):
         dialog = QtGui.QPrintDialog(self.printer, self)
         if dialog.exec_():

@@ -5,6 +5,7 @@
 import traceback
 import os
 import sys
+from threading import Thread, current_thread
 
 try :
     import sgtk
@@ -38,6 +39,8 @@ def decorateur_try_except(fonction_a_decorer):
     
 
     def wrapper_fonction_a_decorer( *args, **kwargs ):
+        print current_thread().getName().ljust(15) + " #  %s ######"%(fonction_a_decorer.__name__)
+
 
         try :
             return fonction_a_decorer( *args, **kwargs )
@@ -50,6 +53,7 @@ def decorateur_try_except(fonction_a_decorer):
 
 
 def plog(text, clear = None):
+    return
     a = None
     filename = os.path.join(getUserTempPath(),"LOG_"+outFileName+".txt" ) 
     if clear : 
@@ -77,6 +81,7 @@ def perr(text, clear = None):
 
 
 def pprint(text, clear = None) :
+
 
     a = None
     filename = os.path.join(getUserTempPath(),"PR_"+outFileName+".txt" ) 
@@ -112,6 +117,9 @@ def getTempPath():
 
 
 def getUserTempPath():
+
+    #return "c:/RHO"
+
     if not os.path.isdir(userTempPath) :
         os.makedirs(userTempPath)
     return userTempPath
@@ -143,7 +151,7 @@ def getPathToShotgunApi():
 
 def OS_convertPath(path):
     if sys.platform == "darwin":
-        return path.replace( "\\\\SLEDGE\\vol1", "/mnt/sledge").replace("\\","/")
+        return path.replace( "\\\\SLEDGE\\vol1", "/mnt/sledge").replace("\\","/").replace("//server01/shared2",'/mnt/shared2')
 
     elif sys.platform == "linux2":
         return path

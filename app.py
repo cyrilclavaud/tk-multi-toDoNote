@@ -8,10 +8,9 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+import tank
 
-from sgtk.platform import Application
-
-class StgkStarterApp(Application):
+class StgkStarterApp(tank.platform.Application):
     
     """
     The app entry point. This class is responsible for intializing and tearing down
@@ -38,5 +37,23 @@ class StgkStarterApp(Application):
         menu_callback = lambda : app_payload.dialog.show_dialog(self)
 
         # now register the command with the engine
-        self.engine.register_command("To_Do_Note_App", menu_callback)
+        self.engine.register_command("ToDo", menu_callback)
+
+
+        self.log_info("trying to startup")
+
+
+        if not hasattr(tank, '_tk_multi_ToDoNoteApp_shown'):
+            # very first time we run this app
+            tank._tk_multi_ToDoNoteApp_shown = True
+
+            if self.settings.has_key('launch_at_startup') :
+                launchAtStartup = self.get_setting('launch_at_startup')  
+                if launchAtStartup  and not  self.engine.name in ["tk-shotgun", "tk-desktop", "tk-shell"] :
+                    print "Launch at start up"               
+                    app_payload.dialog.show_dialog(self)
+
+
+
+        #print self.get_setting('launch_at_startup'):
 

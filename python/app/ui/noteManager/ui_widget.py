@@ -22,8 +22,9 @@ from utils import *
 
 
 class my_textEdit(QtGui.QTextEdit) :
-    
+    SIGNAL_return = _signal()    
     def __init__(self, text, editable = True, parent = None) :
+
 
         QtGui.QTextEdit.__init__(self, text, parent)
         if editable :
@@ -37,7 +38,19 @@ class my_textEdit(QtGui.QTextEdit) :
             self.setWordWrapMode(QtGui.QTextOption.WrapAnywhere);
 
             self.document().documentLayout().documentSizeChanged.connect(self.adjustMinimumSize) 
-     
+        else :
+            action = QtGui.QAction( self)
+            action.setShortcuts( ["Ctrl+Enter","Ctrl+Return"] )
+            action.triggered.connect(self.actionReturn)
+            self.addAction(action)
+
+            self.setToolTip("Ctrl+Enter to create without pushing button")
+            #print "-> do"
+            #self.connect (action, SIGNAL (triggered (bool)), this, SLOT (emitText());
+       # print "do -> DONE"
+    def actionReturn(self ) :
+        if self.hasFocus():
+            self.SIGNAL_return.emit()
 
     def adjustMinimumSize(self, size) :
     
@@ -51,15 +64,17 @@ class toggleBtn(QtGui.QPushButton) :
         self.setIcon(QtGui.QIcon(getRessources("refreshUI.png") ))
         self.setFlat(True);
         self.setIconSize(QtCore.QSize(16,16));
-        self.setStyleSheet("QPushButton{outline: none;}");
 
+        style = 'QPushButton:hover{border: 1px solid rgb(48,226,227)}'
+        self.setStyleSheet("QPushButton{outline: none;}"+style);
+        
 class loadingWidget(QtGui.QWidget) :
-    @decorateur_try_except
+    ## @decorateur_try_except
     def __init__(self, intSize = 50, parent = None):
         QtGui.QWidget.__init__(self, parent)
          
         # Load the file into a QMovie
-        intSize = 50
+
         self.movie = QtGui.QMovie(getRessources( "preloader_%i.gif"%intSize), QtCore.QByteArray(), self)
          
         size = self.movie.scaledSize()
@@ -86,7 +101,7 @@ class loadingWidget(QtGui.QWidget) :
 
 
 class versionWidgetCombo(QtGui.QWidget) :
-    @decorateur_try_except
+    ## @decorateur_try_except
     def __init__(self, parent = None):
         super(versionWidgetCombo, self).__init__(parent)
         
@@ -125,10 +140,11 @@ class versionWidgetCombo(QtGui.QWidget) :
         self.layout.addWidget(self.pic,QtCore.Qt.AlignLeft)
 
        
-        self.versionQtCombo = QtGui.QComboBox( )
+        self.versionQtCombo = QtGui.QComboBox( parent = self )
         self.nameQt = QtGui.QLabel("", parent = self)
         self.userQt = QtGui.QLabel("", parent = self)
         self.dateQt = QtGui.QLabel("", parent = self )
+        self.taskQt =  QtGui.QLabel("", parent = self )
 
         comboLayout = QtGui.QHBoxLayout()
         comboLayout.setContentsMargins(0,0,0,0)
@@ -140,6 +156,7 @@ class versionWidgetCombo(QtGui.QWidget) :
         infoLayout.addWidget( self.nameQt )    
         infoLayout.addWidget( self.userQt ) 
         infoLayout.addWidget( self.dateQt )   
+        infoLayout.addWidget( self.taskQt )
         infoLayout.addSpacing( 100)
 
         #infoLayout.addStretch()
@@ -153,7 +170,7 @@ class versionWidgetCombo(QtGui.QWidget) :
 
 
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def setVersionValue(self, idx) :
 
 
@@ -161,6 +178,7 @@ class versionWidgetCombo(QtGui.QWidget) :
             self.nameQt.setText("Name : None" )
             self.userQt.setText("User : None" )
             self.dateQt.setText("Created : None" )
+            self.taskQt.setText("Task : None")
 
             self.pic.setParent(None)
             self.pic = PicButton( getRessources( "empty.png"),50,50, overImageName = None)
@@ -183,8 +201,11 @@ class versionWidgetCombo(QtGui.QWidget) :
             
             self.nameQt.setText("Name : %s"%versionData["code"].replace(versionString, "<b>%s</b>"%versionString) )    
             self.userQt.setText("%s : <b>%s</b"%("User"  ,  versionDataName ) )  
-            self.dateQt.setText("%s : <b>%s</b"%("Created", versionData["created_at"]) )   
-            
+            self.dateQt.setText("%s : <b>%s</b"%("Created", versionData["created_at"]) ) 
+            versionText = "None"
+            if versionData['sg_task']  :
+                versionText =versionData['sg_task']["name"]
+            self.taskQt.setText("%s : <b>%s</b"%("Task", versionText ) ) 
             self.pic.setParent(None)
             self.pic = PicButton( versionData["downloadedImage"] ,200,200, overImageName = "play.png",  doStart=True)
             
@@ -194,14 +215,14 @@ class versionWidgetCombo(QtGui.QWidget) :
             self.pic.SIGNAL_imageClicked.connect(self.play_pathToMovie)
 
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def play_pathToMovie(self, file):
         
         if self.pathToMovie :
             convertPath =   OS_convertPath( self.pathToMovie )
             osSystem( convertPath )
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def setOnLoading(self):
         if self.pic :
             self.pic.setParent(None)
@@ -209,7 +230,7 @@ class versionWidgetCombo(QtGui.QWidget) :
         self.pic.setMaximumWidth(50)
         self.layout.addWidget(self.pic,QtCore.Qt.AlignLeft )
     
-    @decorateur_try_except
+    ## @decorateur_try_except
     def updateWidget(self, datas ):
         self.versionDatas= datas[0]
 
@@ -265,11 +286,13 @@ class versionWidgetCombo(QtGui.QWidget) :
 
 class versionWidget(QtGui.QWidget) :
 
-    @decorateur_try_except
-    def __init__(self, versionData, parent=None):
+    ## @decorateur_try_except
+    def __init__(self, versionData, shortCutCodeList = None ,taskIcon = None, parent=None):
         super(versionWidget, self).__init__(parent)
         self.pathToMovie = versionData["sg_path_to_movie"]
-        
+        if not self.pathToMovie :
+            print "sg_path_to_movie is empty", versionData
+
         testLayout = QtGui.QVBoxLayout() 
         testLayout.setContentsMargins(0,0,0,0)
         layout = QtGui.QHBoxLayout()
@@ -283,10 +306,20 @@ class versionWidget(QtGui.QWidget) :
         pic.SIGNAL_imageClicked.connect(self.play_pathToMovie)
 
 
+        titleLay = QtGui.QHBoxLayout()
+        titleLay.addStretch()
+        titleLay.setContentsMargins(0,0,0,0)
+
         if versionData.has_key("Title") :
             titleLabel = QtGui.QLabel(versionData["Title"] ,  parent = self )
             titleLabel.setAlignment(QtCore.Qt.AlignCenter)
-            testLayout.addWidget(titleLabel)
+            if taskIcon :
+                taskIconLabel = QtGui.QLabel()
+                taskIconLabel.setPixmap( QtGui.QPixmap(getRessources(taskIcon)).scaled( 16,16, QtCore.Qt.KeepAspectRatio)    )
+                titleLay.addWidget(taskIconLabel)    
+            titleLay.addWidget(titleLabel)
+            testLayout.addLayout(titleLay)
+        titleLay.addStretch()
         pic.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(pic)
 
@@ -309,24 +342,31 @@ class versionWidget(QtGui.QWidget) :
         txt+= "name : %s\n"%versionData["code"]
         txt+= "%s : %s\n"%("user"  ,  versionDataName )
         txt+= "%s : %s\n"%("created", versionData["created_at"])
-        txt+= "%s : %s\n"%("task", versionData["sg_task"]["name"])
+        if versionData["sg_task"] :
+            txt+= "%s : %s\n"%("task", versionData["sg_task"]["name"])
+        txt+= "\n  - Shortcut -\n" 
+        txt+= "%s : %s"%("Play :", str( shortCutCodeList ))
         self.setToolTip(txt)
 
-        return
+        if shortCutCodeList :
+            action = QtGui.QAction( self)
+            action.setShortcuts( shortCutCodeList )
+            action.triggered.connect(self.play_pathToMovie)
+            self.addAction(action)
 
 
 
-    @decorateur_try_except
-    def play_pathToMovie(self, file):
-        
-        convertPath =   OS_convertPath( self.pathToMovie )
-        osSystem( convertPath )
+    ## @decorateur_try_except
+    def play_pathToMovie(self, file = None):
+        if self.pathToMovie :
+            convertPath =   OS_convertPath( self.pathToMovie )
+            osSystem( convertPath )
 
 
 class PicButton(QtGui.QLabel):
     SIGNAL_imageClicked = _signal(object)
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def __init__(self, imageFileName, x = 100, y = 100 , overImageName = "pencil.png" , doStart=False , parent=None):
         super(PicButton, self).__init__(parent)
         self.do_on_hover  = True 
@@ -379,14 +419,14 @@ class PicButton(QtGui.QLabel):
         if self.do_on_hover :
             self.createOverlayPixmap()
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def mousePressEvent(self, event):
         super(PicButton, self).mousePressEvent(event)
 
         self.SIGNAL_imageClicked.emit( self.fileOnDisk)
 
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def createOverlayPixmap(self , alpha = 45):
 
 

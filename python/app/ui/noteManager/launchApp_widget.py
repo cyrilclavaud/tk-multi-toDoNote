@@ -7,10 +7,13 @@ try :
     _signal = QtCore.Signal 
     outFileName = "side"
 
+    
+
 except :
     from PyQt4 import QtGui, QtCore
     _signal = QtCore.pyqtSignal
     outFileName = "cute"
+
 
 import utils
 from utils import *
@@ -22,18 +25,30 @@ import os
 
 class launchBtn(QtGui.QPushButton) :
     
-    @decorateur_try_except
-    def __init__(self, launchApp, values , parent = None):
+    ## @decorateur_try_except
+    def __init__(self, launchApp, values , SGTK_ENGINE, parent = None, version = None):
         QtGui.QPushButton.__init__(self,  parent)
         
+        #launchApp = "tk-multi-launchnukeX"
+
+        self.SGTK_ENGINE = SGTK_ENGINE
         self.launchApp = launchApp
+        self.version = version
+
+        
+        if not SGTK_ENGINE.apps.has_key( launchApp ) :
+            self.setEnabled(False)
+
+
         self.values = values
         
-
         self.setIcon(QtGui.QIcon(getRessources(values["icon"]) ))
+
         self.setFlat(True);
-        self.setIconSize(QtCore.QSize(32,32));
-        self.setStyleSheet("QPushButton{outline: none;}");
+        self.setIconSize(QtCore.QSize(30,30));
+        style = 'QPushButton:hover{border: 1px solid rgb(48,226,227)}'
+        self.setStyleSheet("QPushButton{outline: none;}"+style);
+
 
         self.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.fileMenu = self.createMenu()
@@ -41,12 +56,24 @@ class launchBtn(QtGui.QPushButton) :
         self.setMaximumWidth(32)
         self.setMaximumHeight(32)
 
-    @decorateur_try_except
+
+    def paintEvent (self, event):  
+        QtGui.QPushButton.paintEvent(self, event)  
+
+        if self.version :
+            painter = QtGui.QPainter(self) 
+            painter.setPen( QtGui.QPen(QtGui.QColor(255,255,255,255))) 
+            painter.drawText( self.rect().adjusted(3, 0, 0 , 0), QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter, str(self.version) )
+
+
+
+
+    ## @decorateur_try_except
     def contextMenuEvent(self, e ) :
         self.fileMenu.exec_( e.globalPos() )
 
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def setClickAction(self, p = None ):
         if self.values["files"][0]  :
             path = self.values["files"][0][0]
@@ -61,7 +88,7 @@ class launchBtn(QtGui.QPushButton) :
 
         self.clicked.connect( fct )
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def createMenu(self ):
 
         fileMenu =  QtGui.QMenu()
@@ -80,46 +107,59 @@ class launchBtn(QtGui.QPushButton) :
         fileMenu.addAction("Empty Scene",fct )
         return fileMenu
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def launchFromContext(self,  entityId):
-        eng = sgtk.platform.current_engine()
-        appLauncher = eng.apps.get(self.launchApp)
+
+        appLauncher = self.SGTK_ENGINE.apps[self.launchApp]
+        
 
         tk_i = sgtk.tank_from_entity( "Task" , entityId)
         context = tk_i.context_from_entity("Task" ,entityId )
-        appLauncher._launch_app(context, version=None)
-
+        print self.launchApp , "launch -> empty ", context
+        appLauncher._launch_app(context, version= self.version )
+    
+    ## @decorateur_try_except
     def launchFromPath(self,  path):
+        #path = "//sledge/vol1/Projects/EventTrackingProject/Compositing/Setups/Nuke/EV001/Comp/work/EV001_comp_v004.nk"
 
 
-        eng = sgtk.platform.current_engine()
-        appLauncher = eng.apps.get(self.launchApp)
-
+        app =self.SGTK_ENGINE.apps[self.launchApp]
+ 
+        
         tk_i = sgtk.tank_from_path( path)
-            
         context = tk_i.context_from_path(path)
-        appLauncher._launch_app( context, path )
+        print self.launchApp, "launch ->", context , path 
+        #app._launch_app(context, version= self.version )
+        app._launch_app(   context, file_to_open= path, version=self.version) 
+
 
 
 
 
 
 class LaunchApp_widget( QtGui.QWidget ):
-    @decorateur_try_except    
+ 
+    ## @decorateur_try_except       
     def paintEvent(self, pe):
+
+
         opt = QtGui.QStyleOption()
         opt.initFrom(self)
         p = QtGui.QPainter(self)
         s = self.style()
+
         s.drawPrimitive(QtGui.QStyle.PE_Widget, opt, p, self)
 
-    @decorateur_try_except
-    def __init__(self, new_appLauncherDict, shotId, taskName, entityCode,  empty = False, parent = None  ) :
 
-        
+    ## @decorateur_try_except
+    def __init__(self, new_appLauncherDict, shotId, taskName, entityCode,  empty = False, SGTK_ENGINE = None, parent = None  ) :
+
+
 
         QtGui.QWidget.__init__(self, parent)
         self.setAutoFillBackground(True)
+        self.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")
+        
         
         #"background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #9dd53a, stop: .5 #a1d54f, stop: .51 #80c217, stop: 1 #7cbc0a);"
 
@@ -138,7 +178,7 @@ class LaunchApp_widget( QtGui.QWidget ):
         lab.setMinimumHeight(32)
 
         layout.addSpacing(9)
-        layout.addWidget(QtGui.QLabel("<b><font color='#191919'> Launch Bar </font></b>"))
+        layout.addWidget(QtGui.QLabel("<b><font color='#425C73'> Launch Bar </font></b>"))
         layout.addStretch()
         layout.addWidget(lab)
         layout.addSpacing(9)
@@ -148,12 +188,8 @@ class LaunchApp_widget( QtGui.QWidget ):
                 layout.addWidget(loadingWidget(intSize = 32 ))
             return
 
-        try :
-            self.eng = sgtk.platform.current_engine()
-
-
-        except :
-            self.eng = None 
+        if not SGTK_ENGINE :
+            print "fail"
             return
 
 
@@ -164,36 +200,21 @@ class LaunchApp_widget( QtGui.QWidget ):
         layout.addLayout(self.launchLayout)
 
         for task in new_appLauncherDict.keys():
+
             for appLauncher in new_appLauncherDict[task].keys():
                 if new_appLauncherDict[task][appLauncher].has_key("files") :
-                    self.launchLayout.addWidget( launchBtn( appLauncher, new_appLauncherDict[task][appLauncher], parent = self ) )
+                    
+                    versionList = []
+                    if SGTK_ENGINE.apps.has_key( appLauncher ) :
+                        versionList = SGTK_ENGINE.apps[appLauncher].get_setting("versions") 
 
-
-
-
-    @decorateur_try_except
-    def updateLauncherList(self, new_appLauncherDict):
-
-        if not self.eng :
-            return
-
-        for i in reversed(range(self.launchLayout.count())):   
-            wid =  self.launchLayout.itemAt(i).widget()
-            wid.setParent(None)
-            try :
-                del wid
-            except :
-                pass
-
-
-        for task in new_appLauncherDict.keys():
-            for appLauncher in new_appLauncherDict[task].keys():
-                if new_appLauncherDict[task][appLauncher].has_key("files") :
-                    self.launchLayout.addWidget( launchBtn( appLauncher, new_appLauncherDict[task][appLauncher], parent = self ) )
-
-
-
-
+                    if versionList :
+                        for  version in versionList :
+                            self.launchLayout.addWidget( launchBtn( appLauncher, new_appLauncherDict[task][appLauncher], SGTK_ENGINE ,parent = self, version = version ) )                            
+    
+                    else :
+                        self.launchLayout.addWidget( launchBtn( appLauncher, new_appLauncherDict[task][appLauncher], SGTK_ENGINE ,parent = self , version = None) )
+                    
 
 
 

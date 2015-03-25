@@ -11,6 +11,8 @@ import sys
 import Queue
 import gc
 
+from operator import itemgetter
+
 import utils
 from utils import *
 
@@ -48,7 +50,6 @@ from note_reply_widget import *
 import launchApp_widget
 from launchApp_widget import *
 
-
 class NoRectDelegate(QtGui.QItemDelegate): 
     def __init__(self , parent = None):
         super(NoRectDelegate, self).__init__( parent )
@@ -57,45 +58,6 @@ class NoRectDelegate(QtGui.QItemDelegate):
         option.state &= ~QtGui.QStyle.State_HasFocus
         QtGui.QItemDelegate.drawFocus (self, painter,option,rect)
 
-class AddButtonDelegate(QtGui.QItemDelegate):
-    """
-    Displays an "Add..." button on the first column of the table if the
-    corresponding row has not been assigned data yet. This is needed when a
-    prediction map for a raw data lane needs to be specified for example.
-    """
-    def __init__(self, parent):
-        super(AddButtonDelegate, self).__init__(parent)
-  
-    def paint(self, painter, option, index):
-        # This method will be called every time a particular cell is in
-        # view and that view is changed in some way. We ask the delegates
-        # parent (in this case a table view) if the index in question (the
-        # table cell) corresponds to an empty row (indicated by '<empty>'
-        # in the data field), and create a button if there isn't one
-        # already associated with the cell.
-        parent_view = self.parent()
-
-        """
-        button = parent_view.indexWidget(index)
-        if index.row() < parent_view.model().rowCount()-1 and parent_view.model().isEmptyRow(index.row()):
-            if button is None:
-                button = AddFileButton(parent_view)
-                button.addFilesRequested.connect(
-                        partial(parent_view.handleCellAddFilesEvent, index.row()))
-                button.addStackRequested.connect(
-                        partial(parent_view.handleCellAddStackEvent, index.row()))
-                button.addRemoteVolumeRequested.connect(
-                        partial(parent_view.handleCellAddRemoteVolumeEvent, index.row()))
-                parent_view.setIndexWidget(index, button)
-        elif index.data() != '':
-            if button is not None:
-                # If this row has data, we must delete the button.
-                # Otherwise, it can steal input events (e.g. mouse clicks) from the cell, even if it is hidden!
-                # However, we can't remove it yet, because we are currently running in the context of a signal handler for the button itself!
-                # Instead, use a QTimer to delete the button as soon as the eventloop is finished with the current event.
-                QTimer.singleShot(750, lambda: parent_view.setIndexWidget(index, None) )
-            """
-        super(AddButtonDelegate, self).paint(painter, option, index)
 
 
 class myQTree( QtGui.QTreeWidget ):
@@ -115,24 +77,42 @@ class myQTree( QtGui.QTreeWidget ):
     SIGNAL_breakNoteLink = _signal(object)
     SIGNAL_querySingleNoteContent = _signal(object)
 
+
+
+
+    ## @decorateur_try_except 
     def __init__(self, task_entriesDictList , parent = None ):
+
         QtGui.QTreeWidget.__init__(self, parent)
-        #self.setFocusPolicy(QtCore.Qt.NoFocus)
+
         self.task_entriesDictList = task_entriesDictList
 
-        self.pixmap = QtGui.QPixmap( getRessources("note_folded.png") )
+        self.pixmap = QtGui.QPixmap( getRessources("add_notes.png")    ).scaled( 16,16, QtCore.Qt.KeepAspectRatio)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
         self.itemDoubleClicked.connect(self.editItem)
         self.itemClicked.connect( self.close_editItem )
-        self.setStyleSheet("myQTree{ outline: 0;}")
-        #self.grabKeyboard()
+
         self.lastItem_edited = None
+        self.setItemDelegate(NoRectDelegate(self ))
 
-        self.setItemDelegate(NoRectDelegate())
-        #self.setItemDelegateForColumn( 1, AddButtonDelegate(self) )
+        style = "*::item:selected { background-color: transparent ; } "  #  rgba(85,105,10,100%); }  "
+        style1 = "*::item:selected:active { background-color: transparent ; } "
+        style2 = " "
 
+        style3 = "QTreeWidget {  outline: 0;   selection-background-color: transparent; } "
+        
+
+        self.setStyleSheet("*{ outline: 0;} "+style + style1 + style3)
+        self.horizontalScrollBar().valueChanged.connect(self.refreshDraw)
+
+        #self.setStyleSheet("* { background-color: rgb(50, 50, 50); }");
+    def refreshDraw(self, mustBeAValueHere ) :
+        self.viewport().repaint()
+
+
+    ## @decorateur_try_except 
     def columHasMoved(self, i ,j ,k, save = True  ):
         if save == False :
 
@@ -156,12 +136,13 @@ class myQTree( QtGui.QTreeWidget ):
             fileBuffer << self.header().saveState()
             headerStateFile.close()
 
+    ## @decorateur_try_except 
     def onCustomContextMenuRequested( self,  pos) :
         item = self.itemAt(pos);
         if ( item ) : 
             self.showContextMenu(item, self.indexAt(pos).column() ,self.viewport().mapToGlobal(pos))
     
-    @decorateur_try_except
+    ## @decorateur_try_except
     def showContextMenu(self, item, col, globalPos) :
 
 
@@ -187,7 +168,7 @@ class myQTree( QtGui.QTreeWidget ):
                 typeMenu.addAction(QtGui.QIcon(getRessources("type.png") ), "NoType", lambda: self.SIGNAL_setNoteType.emit(( [self.selectedItems(),None]) ) )
                 
                 
-                menu.addAction(QtGui.QIcon(getRessources("sequence.png")), "Select Shot(s)",  lambda : self.SIGNAL_selectShot.emit( self.selectedItems() )  )
+                menu.addAction(QtGui.QIcon(getRessources("sequence.png")), "Select Shot/Asset(s)",  lambda : self.SIGNAL_selectShot.emit( self.selectedItems() )  )
                 menu.addSeparator()
                 deleteMenu = menu.addAction(QtGui.QIcon(getRessources("TrashRed.png")),"Delete note(s)",  lambda : self.SIGNAL_deleteNotes.emit( [self.selectedItems()] )  )
 
@@ -243,11 +224,13 @@ class myQTree( QtGui.QTreeWidget ):
 
                 menu.exec_(globalPos)
        
-
+    ## @decorateur_try_except 
     def selectNote_from_id(self, idNote, taskName) :
 
         notes = self.findItems("note_%i"%idNote, QtCore.Qt.MatchRecursive,10) 
+        self.SIGNAL_querySingleNoteContent.emit([ idNote, taskName ])
 
+        return
         if notes :
             self.clearSelection()
             #self.SIGNAL_UpdateTreeWithFilter.emit(0)
@@ -262,27 +245,27 @@ class myQTree( QtGui.QTreeWidget ):
         else :
             self.SIGNAL_querySingleNoteContent.emit([ idNote, taskName ])
 
-
+    ## @decorateur_try_except 
     def selectShot_slot(self):
         self.SIGNAL_selectShot.emit( self.selectedItems() )
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def setNoteStatus_slot(self, status):
         return
-        #print status
 
-    @decorateur_try_except
+
+    ## @decorateur_try_except
     def drawTree(self, painter, region ) :
         return
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def editItem(self, item,  column) :
         
         if column == 0 and str(item.text(10)).startswith("note_") :
             item.setEditableMode(True)
             self.lastItem_edited = item
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def close_editItem(self, item,  column) :
         
         if self.lastItem_edited :
@@ -293,64 +276,115 @@ class myQTree( QtGui.QTreeWidget ):
                 self.lastItem_edited.setEditableMode(False)
                 self.lastItem_edited = None
 
-
+    
     def drawRow(self, painter,  option,  index) :
-
-        if self.model().hasChildren(index):
-
-            if self.isExpanded(index) : 
-                option.displayAlignment    = QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter 
-                painter.fillRect( option.rect, QtGui.QColor(115,115,115, 168) )
-
-            else :
-                """
-                val =  index.sibling(index.row(), 10).data()
-                if val :
-                    if val.toString() :
-                        print str(val.toString())
-                        if str(val.toString()).startswith("task_" ) :
-                            print "tp"
-                            option.displayAlignment = QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter 
-                """
-
-                option.displayAlignment = QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter 
+        option.state &= ~QtGui.QStyle.State_HasFocus
+        painter.save()
+        
 
 
-                gradient = QtGui.QLinearGradient(option.rect.topLeft(),option.rect.bottomLeft())
-                gradient.setColorAt(0,   QtGui.QColor(115,115,115, 168) )
-                gradient.setColorAt(0.5, QtGui.QColor(165,165,165, 168) )
-                gradient.setColorAt(1,   QtGui.QColor(115,115,115, 168) )
+        if self.model().hasChildren(index):       
+            pass
+
+        elif self.itemFromIndex(index).sgData == None :
+            xOff = 0 ; #self.horizontalScrollBar().value()
+            #xOff = (option.rect.topLeft().x()-option.rect.topRight().x())/2.0
+            testRect = option.rect.adjusted(xOff*-1, 0,0,0 )
+
+            itemFrom = self.itemFromIndex(index)
+
+            if itemFrom.isSelected() :
+
+                painter.fillRect( option.rect, QtGui.QColor(48,166,227, 255) )
+
+                font = painter.font()
                 
+                font.setPixelSize(12)
+                font.setBold(True)
+                painter.setFont( font )
+                painter.setBrush(QtGui.QBrush(QtCore.Qt.white))
+                painter.setPen( QtGui.QPen(QtGui.QColor(255,255,255,255)))
+                
+                textRect = testRect.adjusted(41, 0, 0 , 0);
+                painter.drawText( textRect, QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter, "Create Note")
+            else :
 
-                painter.fillRect( option.rect, gradient )
+                painter.fillRect( option.rect, QtGui.QColor(30,30,30, 255) )
 
-                pen = QtGui.QPen(QtGui.QColor("#000000"))
-                painter.setPen(pen)
-                painter.drawLine(option.rect.bottomLeft(),option.rect.bottomRight() )
-
-
-            QtGui.QTreeWidget.drawRow(self, painter, option, index )
-            pen = QtGui.QPen(QtGui.QColor(0,0,0,30))
+                font = painter.font()
+                
+                font.setPixelSize(12)
+                font.setBold(True)
+                painter.setFont( font )
+                painter.setBrush(QtGui.QBrush(QtCore.Qt.white))
+                painter.setPen( QtGui.QPen(QtGui.QColor(205,205,205,255)))
+                textRect = testRect.adjusted(41, 0, 0 , 0);
+                painter.drawText( textRect, QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter, "Create Note")
+                
+            painter.drawPixmap( testRect.topLeft()  , self.pixmap)
+            pen = QtGui.QPen(QtGui.QColor(0,0,0,70))
             painter.setPen(pen)
             painter.drawLine(option.rect.bottomLeft(),option.rect.bottomRight() )
 
         else :
-            option.displayAlignment = QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter 
-            #option.decorationSize = QtCore.QSize(16,16)
+            xOff = 0 ; #self.horizontalScrollBar().value()
+            testRect = option.rect.adjusted(xOff*-1, 0,0,0 )
 
-            if index.row() % 2 :
-                painter.fillRect( option.rect, QtGui.QColor(0,0,0, 0) )
+            itemFrom = self.itemFromIndex(index)
+            if itemFrom.isSelected() :
+                
+                gradient = QtGui.QLinearGradient(testRect.topLeft(),testRect.topRight())
+                #gradient.setColorAt(0.0, itemFrom.statusColor )
+                
+                if not index.row() % 2 :
+                    painter.fillRect( testRect , QtGui.QColor(0,0,0, 80) )
+                    gradient.setColorAt(0.0,   QtGui.QColor(43,149, 204, 255) )
+                    gradient.setColorAt(0.7,   QtGui.QColor(43,149, 204, 255) )
+                else :
+                    painter.fillRect( testRect, QtGui.QColor(0,0,0, 0) )
+                    gradient.setColorAt(0.0,   QtGui.QColor(48,166,227, 255) )
+                    gradient.setColorAt(0.7,   QtGui.QColor(48,166,227, 255) )
+
+                gradient.setColorAt(0.9, itemFrom.statusColor )
+                
+                painter.fillRect( testRect, gradient )
+                pen = QtGui.QPen(QtGui.QColor(0,0,0,35))
+                painter.setPen(pen)
+                painter.drawLine(testRect.bottomLeft(),testRect.bottomRight() )
+
+                pen = QtGui.QPen(QtGui.QColor(190,190,190,250))
+                painter.setPen(pen)
+                
+                gradient = QtGui.QLinearGradient(testRect.topLeft(),testRect.topRight())
+                gradient.setColorAt(0.0,   QtGui.QColor(230,230, 230, 255) )
+                gradient.setColorAt(0.7,   QtGui.QColor(210,210, 210, 255) )
+                gradient.setColorAt(0.9,   QtGui.QColor(190,190, 190, 0) )
+                
+
+                #( const QPoint & topLeft, const QPoint & bottomRight )
+
+                lineRect =  QtCore.QRect( QtCore.QPoint( testRect.topLeft().x(), testRect.bottomRight().y() ) , testRect.bottomRight()   )
+                painter.fillRect( lineRect, gradient )
+
+                
+
+                
+                QtGui.QTreeWidget.drawRow(self, painter, option, index )
+                
+
             else :
-                painter.fillRect( option.rect, QtGui.QColor(0,0,0, 80) )
+                if index.row() % 2 :
+                    painter.fillRect( testRect, QtGui.QColor(0,0,0, 0) )
+                else :
+                    painter.fillRect( testRect , QtGui.QColor(0,0,0, 80) )
 
 
+                QtGui.QTreeWidget.drawRow(self, painter, option, index )
+                pen = QtGui.QPen(QtGui.QColor(0,0,0,35))
+                painter.setPen(pen)
+                painter.drawLine(testRect.bottomLeft(),testRect.bottomRight() )
 
-
-            QtGui.QTreeWidget.drawRow(self, painter, option, index )
-            pen = QtGui.QPen(QtGui.QColor(0,0,0,30))
-            painter.setPen(pen)
-            painter.drawLine(option.rect.bottomLeft(),option.rect.bottomRight() )
-
+        painter.restore()
        
     def drawBranches(self, painter, rect, index):
         return 
@@ -363,35 +397,37 @@ class joinQueue( Queue.PriorityQueue ) :
         Queue.PriorityQueue.__init__(self)
         self.count = 0
 
-
+    ## @decorateur_try_except 
     def put(self, args):
         Queue.PriorityQueue.put(self, args)
         self.count += 1
         self.join() 
 
+    ## @decorateur_try_except 
     def task_done(self):
         Queue.PriorityQueue.task_done(self)
         self.count -= 1
-        return self.count
+        return len(self.queue)
 
+    ## @decorateur_try_except 
     def getCount(self):
-        return self.count
+        return len(self.queue)
 
 class myQueue( Queue.PriorityQueue ) :
     def __init__(self):
         Queue.PriorityQueue.__init__(self)
         self.count = 0
 
-
+    ## @decorateur_try_except 
     def put(self,args):
-        
         Queue.PriorityQueue.put(self, args)
-        
         self.count += 1
 
+    ## @decorateur_try_except 
     def getCount(self):
         return self.count
 
+    ## @decorateur_try_except 
     def task_done(self):
         Queue.PriorityQueue.task_done(self)
         self.count -= 1
@@ -406,12 +442,59 @@ class Example(QtGui.QWidget):
                         "Compo" :  { "tk-multi-launchnuke"  : { "template" : "nuke_shot_work" ,  "icon" : "NukeApp.png" },
                                      "tk-multi-launchnukeX" : { "template" : "nuke_shot_work" ,  "icon" : "NukeXApp.png" }
                                    },
-                        "lighting" : { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" } }
-                      }
+                        "lighting" : { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" } } ,
+                        
+                        "Fur" : { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" },
+                                       "tk-multi-launchhoudini" : {"template" : "houdini_shot_work" ,  "icon" : "HoudiniApp.png" }
+                                    },
 
+                        "modeling" : { "tk-multi-launchmaya" :  { "template" : "maya_asset_work" ,  "icon" : "MayaApp.png" },
+                                       "tk-multi-launchhoudini" : {"template" : "houdini_asset_work" ,  "icon" : "HoudiniApp.png" }
+                                    },
+
+                        "rigging" : { "tk-multi-launchmaya" :  { "template" : "maya_asset_work" ,  "icon" : "MayaApp.png" },
+                                       "tk-multi-launchhoudini" : {"template" : "houdini_asset_work" ,  "icon" : "HoudiniApp.png" }
+                                    },
+                        "Surface" : { "tk-multi-launchmaya" :  { "template" : "maya_asset_work" ,  "icon" : "MayaApp.png" },
+                                       "tk-multi-launchhoudini" : {"template" : "houdini_asset_work" ,  "icon" : "HoudiniApp.png" }
+                                    }
+                       }
+                      
+
+
+    def __del__(self):
+        print "kill Qthread"
+                           
+                           
+
+    def __initStyle(self):
+        return
+
+        # QtGui.QApplication.setStyle("plastique")
+
+        # palette_file = getStyle("dark_palette.qpalette")
+        # fh = QtCore.QFile(palette_file)
+        # fh.open(QtCore.QIODevice.ReadOnly);
+        # file_in = QtCore.QDataStream(fh)
+
+        # # deserialize the palette
+        # # (store it for GC purposes)
+        # _dark_palette = QtGui.QPalette()
+        # file_in.__rshift__(_dark_palette)
+        # fh.close()
+
+        # # set the std selection bg color to be 'shotgun blue'
+        # _dark_palette.setBrush(QtGui.QPalette.Highlight, QtGui.QBrush(QtGui.QColor("#30A7E3")))
+        # _dark_palette.setBrush(QtGui.QPalette.HighlightedText, QtGui.QBrush(QtGui.QColor("#FFFFFF")))
+
+        # # and associate it with the qapplication
+        # QtGui.QApplication.setPalette(_dark_palette)
+           
+
+    ## @decorateur_try_except 
     def __init__(self ):
-
-
+        self.__initStyle()
+        import traceback 
 
         perr("",True)
         plog("",True)
@@ -419,29 +502,42 @@ class Example(QtGui.QWidget):
 
 
         QtGui.QWidget.__init__(self)
-        #self.setWindowFlags(QtCore.Qt.WindowMaximizeButtonHint)
-
         
+
         self.queue = None
+        self.sgtkQueue = None
+
+        self.SGTK_ENGINE = None
+        self.engineName = None
+        self._app = None
+        self.sg = None
+       
+
+        try :
+            import sgtk
+            self.SGTK_ENGINE = sgtk.platform.current_engine()
+            self.engineName = self.SGTK_ENGINE.instance_name
+            print "getting engine ok ", self.engineName
+        except :
+            pass
 
         if "USE THREADING" :
             self.queue = myQueue() #Queue.PriorityQueue()
+            self.sgtkQueue = myQueue()
         else :
-            pprint("don't use threading")
             self.queue = joinQueue()
-        
-        projectId = 191
+            self.sgtkQueue = joinQueue()
+
+        projectId =  191 
         userDict = None
 
         self.InitOnShotName = {"id":0}
         self.InitFilterOnTaskName = None
-        self.engineName = None
+        
 
-        self._app = None
+       
         try :
             self._app = sgtk.platform.current_bundle()
-
-
 
             projectDict = self._app.context.project
             pprint("Project :" + str( projectDict ) + "\n")
@@ -464,30 +560,26 @@ class Example(QtGui.QWidget):
 
                     self.InitOnShotName= entityDict
                     pprint("init not manager on shot "+ str(self.InitOnShotName) + "\n")
+                elif entityDict["type"] == "Asset" :
 
-            self.eng = sgtk.platform.current_engine()
-
-            if self.eng :
-                self.engineName = self.eng.instance_name
-
-
+                    self.InitOnShotName= entityDict
+                    pprint("init not manager on asset "+ str(self.InitOnShotName) + "\n")
 
         except :
             pprint(str( "cant get context entity") + "\n")
 
        
-
         ############# TASK
-
-
         task_entriesDictList = [ {"text" : "All", "icon" : None, "values": []  },
                             {"text" : "Compo", "icon" : "task_compo.png", "values": ["Compositing", "Comp", "Compo"] },
-                            {"text" : "Anim", "icon" : "task_animation.png", "values": ["Animation","animation","anim", "Anim"]  },
                             {"text" : "lighting", "icon" : "task_lit.png" , "values": ["Lighting", "lighting"]  },
-                            {"text" : "Fur", "icon" : "task_fur.png" , "values": ["fur","Fur"] },
-                            {"text" : "modeling", "icon" : "task_modelisation.png" , "values": ["Modeling", "modeling"] },
-                            {"text" : "rigging", "icon" : "task_rig.png" , "values": ["Rig", "rig", "rigging"] },
+                            {"text" : "Anim", "icon" : "task_animation.png", "values": ["Animation","animation","anim", "Anim"]  },
                             {"text" : "layout", "icon" : "task_layout.png" , "values": ["Layout", "layout"] },
+                            {"text" : "Fur", "icon" : "task_fur.png" , "values": ["fur","Fur"] },                
+                            {"text" : "Surface", "icon" : "task_surfacing.png" , "values": ["Surface"] },             
+                            {"text" : "modeling", "icon" : "task_modelisation.png" , "values": ["Modeling", "Model" ,"modeling"] },
+                            {"text" : "rigging", "icon" : "task_rig.png" , "values": ["Rig", "rig", "rigging"] },
+                            {"text" : "Art", "icon" : "task_art.png" , "values": ["Art","art"] },  
                             {"text" : "NoTask", "icon" : "task.png" , "values": ["NoTask"] }
                           ]
         
@@ -546,44 +638,78 @@ class Example(QtGui.QWidget):
         self.statusFilterWidget = comboFilterWidget2( {"name":"Status" , "icon": "status.png"}, status_entriesDictList, multiCheckable = True  )
 
 
+        print "creating threads" ,
+        for i in range(9) :
 
-        for i in range(10) :
             sg = sg_query( self._app  )            
+            print i,
 
-            sg.setProjectId(projectId)
-            sg.setTempPath()
-            sg.setAppLauncher(self.appLauncherDict)
-            sg.setTypeFilterWidget(self.typeFilterWidget)
-
-            sg.queue=self.queue
-            sg.th_id = i
-
-            sg.SIGNAL_setThumbnail.connect(self.setTreeThumbNail )
-            sg.SIGNAL_setNoteList.connect(self.setNoteList )
+            if i == 0 :
+                self.sg = sg
+                sg.setProjectId(projectId, useSGTK = False )
+                sg.setTempPath()
+                sg.setAppLauncher(self.appLauncherDict)
+                sg.setTypeFilterWidget(self.typeFilterWidget)
             
-            sg.SIGNAL_queryAllShot.connect(self.fillSeqShotTree )
-            sg.SIGNAL_queryAllAsset.connect(self.fillAssetTree )
+            elif i == 2 and self.engineName in ["tk-shotgun", "tk-desktop", "tk-shell"] :
+                self.sg = sg
+                sg.setProjectId(projectId, useSGTK = True )
+                sg.setTempPath()
+                sg.setAppLauncher(self.appLauncherDict)
+                sg.setTypeFilterWidget(self.typeFilterWidget)
 
-            sg.SIGNAL_clearTree.connect( self.clearTree )
-            sg.SIGNAL_queryNoteContent.connect( self.queryNoteContent )
-            sg.SIGNAL_replyNote.connect( self.noteTreeUpdated)
-            sg.SIGNAL_queryNoteVersion.connect(self.queryNoteVersion)
-            sg.SIGNAL_queryVersion.connect(self.updateDrawNote_versions)
-            sg.SIGNAL_addNote.connect( self.addNote )
-            sg.SIGNAL_refreshNote.connect( self.refreshNote)
-            sg.SIGNAL_queryNoteTaskAssigned.connect(self.queryNoteTaskAssigned )
+                sg.queue=self.sgtkQueue
+                sg.th_id = i                
+                
+                sg.SIGNAL_updateLaunchAppWidget.connect(self.updateLauncherWidget)
 
-            sg.SIGNAL_updateLaunchAppWidget.connect(self.updateLauncherWidget)
+                sg.start()
+                pprint("thread Sgtk init " +str(sg.th_id ) +"\n" )
+            else :
+                self.sg = sg
+                sg.setProjectId(projectId, useSGTK = False )
+                sg.setTempPath()
+                sg.setAppLauncher(self.appLauncherDict)
+                sg.setTypeFilterWidget(self.typeFilterWidget)
 
-            sg.SIGNAL_pbar.connect(self.updateProgressBar)
+                sg.queue=self.queue
+                sg.th_id = i                
 
-            sg.start()
 
-            pprint("thread init " +str(sg.th_id ) +"\n" )
+                sg.SIGNAL_setThumbnail.connect(self.setTreeThumbNail )
+                sg.SIGNAL_setNoteList.connect(self.setNoteList )               
+                sg.SIGNAL_queryAllShot.connect(self.fillSeqShotTree )
+                sg.SIGNAL_queryAllAsset.connect(self.fillAssetTree )
+                sg.SIGNAL_clearTree.connect( self.clearTree )
+                sg.SIGNAL_queryNoteContent.connect( self.queryNoteContent )
+                sg.SIGNAL_replyNote.connect( self.noteTreeUpdated)
+                sg.SIGNAL_queryNoteVersion.connect(self.queryNoteVersion)
+                sg.SIGNAL_queryVersion.connect(self.updateDrawNote_versions)
+                sg.SIGNAL_addNote.connect( self.addNote )
+                sg.SIGNAL_refreshNote.connect( self.refreshNote)
+                sg.SIGNAL_queryNoteTaskAssigned.connect(self.queryNoteTaskAssigned )
+                sg.SIGNAL_setShotAsset_taskAssigned.connect( self.setShotAsset_taskAssigned)
+                sg.SIGNAL_getAvailableTasks.connect(self.updateTree1_withFilter )
+
+                sg.SIGNAL_updateLaunchAppWidget.connect(self.updateLauncherWidget)
+
+                sg.SIGNAL_pbar.connect(self.updateProgressBar)
+
+                sg.start()
+                pprint("thread init " +str(sg.th_id ) +"\n" )                
+
+        print "\ncreating threads done\n" 
+
+
+
+
+
+
+
 
         self.initUI()
      
-
+        self.queue.put( [ 3,u"deleteEmptySpawnLink"  , None , None ]  )
         self.queue.put( [ 3,u"fillSeqShotTree"  , None , None ] )
         #
 
@@ -615,6 +741,7 @@ class Example(QtGui.QWidget):
         return entriesDictList
 
 
+    ## @decorateur_try_except 
     def serialize_comboFilterWidget(self, save = True) :
 
         if self.InitFilterOnTaskName :
@@ -655,7 +782,7 @@ class Example(QtGui.QWidget):
 
 
 
-
+    ## @decorateur_try_except 
     def initUI(self):
         self.mainLayout = QtGui.QVBoxLayout() 
         self.mainLayout.setContentsMargins(0,0,0,0)
@@ -667,17 +794,19 @@ class Example(QtGui.QWidget):
 
         self.filteringLayout = QtGui.QHBoxLayout()
         self.filteringLayout.setContentsMargins(0,0,0,0)
-        self.refreshUI_Btn =  toggleBtn("PAF")
-
+        self.refreshUI_Btn =  toggleBtn("")
+        self.refreshUI_Btn.setToolTip("Flush pending operations and refresh notes")
 
 
         
 
+        self.shotAssetFilterWidget = lineEditFilterWidget( {"name":"Shot/Asset" , "icon": None} )
 
-        self.userNameFilterWidget = lineEditFilterWidget( {"name":"User" , "icon": "user.png"} )
-        self.contentFilterWidget  = lineEditFilterWidget( {"name":"Contains" , "icon": "text.png"} )
-        self.entityAssignedFilterWidget  = lineEditFilterWidget( {"name":"Shot Assigned To" , "icon": "thunder-32.png"} )
-
+        self.shotAssetFilterWidget.setToolTip("Ctrl+Enter to select filtered entities ")
+        self.userNameFilterWidget  = lineEditFilterWidget( {"name":"Writer" , "icon": "user.png"} )
+        self.contentFilterWidget   = lineEditFilterWidget( {"name":"Contains" , "icon": "text.png"} )
+        self.entityAssignedFilterWidget  = lineEditFilterWidget( {"name":"Assigned To" , "icon": "thunder-32.png"} )
+        self.entityAssignedFilterWidget.setToolTip("Ctrl+Enter to select filtered entities ")
         #### grouping options
         self.groupByTypeBox = QtGui.QCheckBox("Group by Type")
         self.groupByTypeBox.setCheckState(QtCore.Qt.Unchecked)
@@ -688,14 +817,16 @@ class Example(QtGui.QWidget):
 
         self.filteringLayout.setSpacing(10)
         self.filteringLayout.addWidget( self.refreshUI_Btn)
-        self.filteringLayout.addSpacerItem(self.spacerItem)
+
+        self.filteringLayout.addWidget( self.shotAssetFilterWidget )
         self.filteringLayout.addWidget( self.taskFilterWidget )
+        self.filteringLayout.addWidget( self.entityAssignedFilterWidget )
+
+        self.filteringLayout.addSpacing(20)
         self.filteringLayout.addWidget( self.typeFilterWidget )
         self.filteringLayout.addWidget( self.statusFilterWidget )
         self.filteringLayout.addWidget( self.userNameFilterWidget  )
         self.filteringLayout.addWidget( self.contentFilterWidget )
-        self.filteringLayout.addWidget( self.entityAssignedFilterWidget )
-        self.filteringLayout.addSpacing(10)
 
         #filteringLayout.addWidget(self.groupByTypeBox )
         self.filteringLayout.addStretch()
@@ -716,16 +847,17 @@ class Example(QtGui.QWidget):
         self.myTree = QtGui.QTreeWidget() 
         self.myTree.setIconSize(QtCore.QSize(128,128))
         self.myTree.setColumnCount(11)
-        self.myTree.setHeaderLabels(["Shots","Note count"])
+        self.myTree.setHeaderLabels(["Shots/Assets","Note count"])
         self.myTree.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
         self.myTree.setFocusPolicy(QtCore.Qt.NoFocus)
-
+        self.myTree.setSortingEnabled(True)
 
         self.myTree2 = myQTree( self.taskFilterWidget.entriesDictList )# QtGui.QTreeWidget() 
         self.myTree2.setIconSize(QtCore.QSize(128,128))
         self.myTree2.setColumnCount(11)
-        self.myTree2.setHeaderLabels(["Note Content","Tasks", "Type","Created_at", "User", "v---", "Shot", "Replies", "Shot Assignement", "Created_at"])
+        self.myTree2.setHeaderLabels(["Note Content","Tasks", "Type","Created_at", "Writer", "v---", "Shot/Asset", "Replies", "Assignement", "Created_at"])
         self.myTree2.setSortingEnabled(True)
+        self.myTree2.setExpandsOnDoubleClick(False)
 
         self.myTree2.setAlternatingRowColors(0);
         self.myTree2.setIndentation(0)
@@ -736,9 +868,6 @@ class Example(QtGui.QWidget):
 
         
         header = self.myTree.header()
-
-        #header.setDefaultAlignment(QtCore.Qt.AlignHCenter)
-
         for column in range(1, self.myTree.columnCount()):
             header.hideSection(header.logicalIndex(header.visualIndex(column)))
             
@@ -768,7 +897,7 @@ class Example(QtGui.QWidget):
         midLayout.addWidget(self.myTree2)
 
 
-        self.rightLayout.addWidget( noteLayoutWidget( None,  [ self.getShotItemList() , self.taskFilterWidget, self.typeFilterWidget, self.statusFilterWidget,[] ], self.queue ) )
+        self.rightLayout.addWidget( noteLayoutWidget( None,  [ self.getShotItemList() , self.taskFilterWidget, self.typeFilterWidget, self.statusFilterWidget, self.shotAssetFilterWidget, self.entityAssignedFilterWidget  ], threadQueue = self.queue, sgtkQueue = self.sgtkQueue ) )
         
 
         wFiltering = QtGui.QWidget()
@@ -805,6 +934,12 @@ class Example(QtGui.QWidget):
 
         style = "QSplitter::handle:vertical#verti {background: qlineargradient(x1:0, y1:1, x2:0, y2:1, stop:0 rgba(120, 120, 150, 40% ), stop:1 rgba(120, 120, 150, 40% ) );border: 1px solid rgba(120, 120, 150, 40% ); width : 1px ; height : 1px ;margin-right: 2px;margin-left: 2px;border-radius: 4px;}\n"
         style += "QSplitter::handle:horizontal#hori {background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 rgba(120, 120, 150, 40% ), stop:1 rgba(120, 120, 150, 40% ));border: 1px solid rgba(120, 120, 150, 40% ) ;width: 13px;margin-top: 2px;margin-bottom: 2px;border-radius: 4px;}"
+        
+
+        style = "QSplitter::handle:vertical#verti {  background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(255, 120, 150, 0% ),stop:0.5 rgba(140, 140, 140, 100% ), stop:1 rgba(120, 120, 150, 0% ) );border: 1px solid rgba(120, 120, 150, 0% ) ; width : 1px ; height : 1px ;margin-right: 2px;margin-left: 2px;border-radius: 4px;}\n"
+        style += "QSplitter::handle:horizontal#hori {background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(255, 120, 150, 0% ),stop:0.5 rgba(140, 140, 140, 100% ), stop:1 rgba(120, 120, 150, 0% ) );border: 1px solid rgba(120, 120, 150, 0% ) ;width: 13px;margin-top: 2px;margin-bottom: 2px;border-radius: 4px;}"
+        
+
         self.splitter.setStyleSheet(style )
         horizontalSplitter.setStyleSheet(style )
 
@@ -851,7 +986,7 @@ class Example(QtGui.QWidget):
 
 
         self.updateLauncherWidget( [{"clear":True}, 0 , "", "" ]) 
-         #w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3] ) 
+
 
 
         self.serialize_comboFilterWidget(False)
@@ -861,17 +996,24 @@ class Example(QtGui.QWidget):
         self.splitter.splitterMoved.connect(self.resizeFilterLayout  )
 
         self.myTree.itemSelectionChanged.connect(self.shotTreeClicked )
-        self.refreshUI_Btn.clicked.connect(  lambda : self.shotTreeClicked( True )  ) 
+        self.refreshUI_Btn.clicked.connect(   self.flush  ) 
 
         self.taskFilterWidget.widget.currentIndexChanged.connect( self.updateTree2_withFilter )
-        #self.typeFilterWidget.widget.currentIndexChanged.connect( self.updateTree2_withFilter )
-
         self.typeFilterWidget.widget.currentIndexChanged.connect( lambda : self.shotTreeClicked( True ) )
         self.statusFilterWidget.widget.currentIndexChanged.connect( self.updateTree2_withFilter )
         self.userNameFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
         self.contentFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
         self.entityAssignedFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
+        self.shotAssetFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
 
+        self.shotAssetFilterWidget.widget.textChanged.connect(self.updateTree1_withFilter)
+        self.entityAssignedFilterWidget.widget.textChanged.connect(self.updateTree1_withFilter)
+        self.taskFilterWidget.widget.currentIndexChanged.connect(self.updateTree1_withFilter)
+
+        self.shotAssetFilterWidget.widget.returnPressed.connect(self.selectFrom_ReturnPressed )
+        self.entityAssignedFilterWidget.widget.returnPressed.connect(self.selectFrom_ReturnPressed )
+
+        self.myTree2.itemSelectionChanged.connect(self.noteTreeClicked )
 
         self.myTree2.SIGNAL_breakNoteLink.connect(self.breakNoteLink)
         self.myTree2.SIGNAL_setNoteStatus.connect(self.setNoteStatus)
@@ -883,13 +1025,14 @@ class Example(QtGui.QWidget):
         self.myTree2.SIGNAL_setNoteLink.connect(self.setNoteLink)
         self.myTree2.SIGNAL_linkToLastVersion.connect(self.linkToLastVersion)
         self.myTree2.SIGNAL_UpdateTreeWithFilter.connect(self.updateTree2_withFilter)
-
         self.myTree2.SIGNAL_querySingleNoteContent.connect(self.querySingleNoteContent)
 
 
-        self.myTree2.itemSelectionChanged.connect(self.noteTreeClicked )
+
         self.myTree2.header().sectionMoved.connect(self.myTree2.columHasMoved)
         self.myTree2.header().sectionResized.connect(self.myTree2.columHasMoved)
+        self.myTree2.header().setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.myTree2.header().customContextMenuRequested.connect(self.myTree2headerMenu)
 
         self.groupByTypeBox.stateChanged.connect(self.refreh_myTree2)
 
@@ -902,7 +1045,7 @@ class Example(QtGui.QWidget):
         self.spacerItem.changeSize(col1-14, 1)
         self.filteringLayout.invalidate()
 
-        #self.myTree2.columHasMoved(0,0,0, False)
+        self.myTree2.columHasMoved(0,0,0, False)
 
 
         header.setResizeMode(0, QtGui.QHeaderView.Interactive)
@@ -910,7 +1053,7 @@ class Example(QtGui.QWidget):
         self.show()
 
 
-
+    ## @decorateur_try_except
     def resizeFilterLayout(self, pos, idx):
 
         if idx == 1 :
@@ -919,7 +1062,7 @@ class Example(QtGui.QWidget):
             self.filteringLayout.invalidate()
 
 
- 
+    ## @decorateur_try_except
     def findInTree(self, sg_id, parent = None):
         root = self.myTree
         if parent :
@@ -929,7 +1072,7 @@ class Example(QtGui.QWidget):
         return root.findItems( sg_id, QtCore.Qt.MatchRecursive,10 )
 
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def getNoteTaskNameList(self, noteDict ) :
         taskList = []
         if  noteDict["tasks"] :
@@ -941,11 +1084,12 @@ class Example(QtGui.QWidget):
         return  taskList
 
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def clearRightLayout(self) :
         for i in reversed(range(self.rightLayout.count())):   
             wid =  self.rightLayout.itemAt(i).widget()
             wid.setParent(None)
+            wid.deleteLater()
 
 
 
@@ -966,25 +1110,30 @@ class Example(QtGui.QWidget):
     #############################################
   
     #OBSO
+    ## @decorateur_try_except 
+    """
     def fill_TaskAssigned(self, idx) :
         soloCheckedTask = self.taskFilterWidget.getSoloChecked() 
         if soloCheckedTask :
             for shotAssetItem in self.myTree.findItems("shotAsset_", QtCore.Qt.MatchStartsWith  | QtCore.Qt.MatchRecursive,  10) : 
                 
                 self.queue.put( [ 0 , u"queryTaskAssigned" ,  [shotAssetItem.sgData, soloCheckedTask] , None ] )
+    """
 
-
+    ## @decorateur_try_except
     def breakNoteLink(self, itemList ) :
-        self.queue.put( [ 0 , u"breakSpawnLink" ,  [ itemList[0].sgData["spawnLinkId"],  itemList[0].sgData["shotId"],  itemList[0].sgData["shotCode"] ]  , None ] )
+        self.queue.put( [ 0 , u"breakSpawnLink" ,  [ itemList[0].sgData["spawnLinkId"],  itemList[0].sgData["shotId"],  itemList[0].sgData["shotCode"],  itemList[0].sgData["shotType"]  ]  , None ] )
 
+    ## @decorateur_try_except
     def querySingleNoteContent(self, noteId_taskName ) :
         noteId = noteId_taskName[0]
         taskName = noteId_taskName[1]
 
         taskValues = self.taskFilterWidget.retrieveValueFromName(taskName)
 
-        self.queue.put( [ 0 , u"queryNoteContent"  , [{"id":noteId,"taskValues": taskValues}] , None ] )
-    @decorateur_try_except
+        self.queue.put( [ 0 , u"queryNoteContent"  , [{"id":noteId,"taskValues": taskValues, 'mustDisplay':True }] , None ] )
+
+    ## @decorateur_try_except
     def updateNoteContent(self, obj ):
         #[0] note content
         #[1] note id
@@ -992,30 +1141,20 @@ class Example(QtGui.QWidget):
         self.queue.put( [ 0 , u"editNoteContent" ,  obj , None ] )
         #
     
-    @decorateur_try_except
+    ## @decorateur_try_except
     def refreh_myTree2(self, state) :
+        return
 
-        header = self.myTree2.header()
-        if state :
-            header.hideSection(header.logicalIndex(header.visualIndex(2)))
-        else :
-            header.showSection(header.logicalIndex(header.visualIndex(2)))
-        self.shotTreeClicked(forceRedraw = True)
-
-
-
-
-
-    @decorateur_try_except
+    ## @decorateur_try_except
     def setNoteStatus(self, itemListAndStatus_list):
         for item in itemListAndStatus_list[0]:
             noteId = 0 
             if item.sgData.has_key('id') :
                 noteState = {"new_sg_status_list":itemListAndStatus_list[1], "id" : item.sgData['id']}
-                self.queue.put( [ 0 , u"setNoteStatus" , [noteState] , None ] )
+                self.queue.put( [ 0 , u"setNoteStatus" , [noteState, item.sgData] , None ] )
 
     
-    @decorateur_try_except
+    ## @decorateur_try_except
     def setNoteType(self, itemListAndType_list):
         for item in itemListAndType_list[0]:
             noteId = 0 
@@ -1023,7 +1162,7 @@ class Example(QtGui.QWidget):
                 noteType = {"new_sg_note_type":itemListAndType_list[1], "id" : item.sgData['id']}
                 self.queue.put( [ 0 , u"setNoteType" , [noteType] , None ] )
     
-    @decorateur_try_except
+    ## @decorateur_try_except
     def linkToLastVersion(self, selectedNoteList) :
         for item in selectedNoteList[0]:
             noteId = 0
@@ -1032,20 +1171,19 @@ class Example(QtGui.QWidget):
                 if item.sgData["tasks"] :
                     taskValuesList = self.taskFilterWidget.retrieveValueFromName(item.sgData["tasks"][0]["name"])
                     if taskValuesList :
-                        self.queue.put( [ 0 , u"linkToLastVersion" , [  item.sgData['shotId'],  taskValuesList , item.sgData['id'] ] , None ] )
+                        self.queue.put( [ 0 , u"linkToLastVersion" , [  item.sgData['shotId'],  taskValuesList , item.sgData['id'], item.sgData['shotType'] ] , None ] )
                 if selectedNoteList[1] :
                     noteState = {"new_sg_status_list":selectedNoteList[1], "id" : item.sgData['id']}
-                    self.queue.put( [ 0 , u"setNoteStatus" , [noteState] , None ] )
+                    self.queue.put( [ 0 , u"setNoteStatus" , [noteState,  item.sgData] , None ] )
 
-
+    ## @decorateur_try_except
     def setNoteLink(self, itemListAndTaskValues_list) :
         for item in itemListAndTaskValues_list[0] :
             if item.sgData.has_key('id') :
 
                 self.queue.put( [ 0 , u"setNoteLink" , [item.sgData, itemListAndTaskValues_list[1], itemListAndTaskValues_list[2] ] , None ] )
 
-
-    @decorateur_try_except
+    ## @decorateur_try_except
     def setNoteTask(self, itemListAndTaskValues_list) :
 
         for item in itemListAndTaskValues_list[0] :
@@ -1054,7 +1192,7 @@ class Example(QtGui.QWidget):
 
                 self.queue.put( [ 0 , u"setNoteTask" , [item.sgData, itemListAndTaskValues_list[1] ] , None ] )
     
-    @decorateur_try_except
+    ## @decorateur_try_except
     def deleteNotes(self, itemList ) :
         for item in itemList[0]:
             if not item.sgData.has_key("spawnLinkId") :
@@ -1062,17 +1200,22 @@ class Example(QtGui.QWidget):
                     #noteType = {"new_sg_note_type":itemListAndType_list[1], "id" : item.sgData['id']}
                     self.queue.put( [ 0 , u"deleteNote" , [item.sgData['id']] , None ] )
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def multiReplyNoteSlot(self, obj):
         self.queue.put( [ 0 , u"multyReplyNote" , obj , None ] )
         #self.queue.join()
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def replyNoteSlot(self, obj) :
         self.queue.put( [ 0 , u"replyNote" , obj , None ] )
         #
 
-    @decorateur_try_except
+    ## @decorateur_try_except
+    def litNoteWidgetItem(self) :
+        for noteItemWidget in self.myTree2.findItems("note_", QtCore.Qt.MatchStartsWith | QtCore.Qt.MatchRecursive,10) :
+            noteItemWidget.litTaskLink()
+
+    ## @decorateur_try_except
     def noteTreeClicked(self) :
 
         """
@@ -1089,6 +1232,7 @@ class Example(QtGui.QWidget):
         taskList = []
         noteData = []
         for itemW in selectedItemList :
+
             if str(itemW.text(10)).startswith("note") :
                 if itemW.sgData["tasks"] :
                     taskValues = self.taskFilterWidget.retrieveValueFromName(itemW.sgData["tasks"][0]['name'])
@@ -1103,6 +1247,9 @@ class Example(QtGui.QWidget):
                 taskList.append(str( itemW.text(0) ) )
 
 
+
+        self.litNoteWidgetItem()
+
         if noteData :
             if len(noteData) == 1 :
 
@@ -1112,42 +1259,86 @@ class Example(QtGui.QWidget):
                     taskValues = self.taskFilterWidget.retrieveValueFromName( noteData[0]["tasks"][0]["name"] )
                     taskName =   self.taskFilterWidget.retrieveNameFromValue( noteData[0]["tasks"][0]["name"] )
     
-                self.queue.put([-5, u"getExecutable",   [noteData[0]["shotId"], taskValues, taskName , noteData[0]["shotCode"] ] , None ] )
+                if not taskValues :
+                    taskName = "NoTask"
+                    taskValues = [ "NoTask" ]
+
+                # flushSgtkQueue
+                while not self.sgtkQueue.empty():
+                    try:
+                        self.sgtkQueue.get(False)
+                    except Empty:
+                        continue
+                    self.sgtkQueue.task_done()
+
+                self.sgtkQueue.put([-5, u"getExecutable",   [noteData[0]["shotId"], taskValues, taskName , noteData[0]["shotCode"], noteData[0]["shotType"] ] , None ] )
 
             self.queue.put( [ 0 , u"queryNoteContent"  , noteData , None ] )
 
-        elif selectedItemList :
+        else : # selectedItemList :
             self.drawNote(taskList)
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def drawNote(self, taskList = []):
+        
 
-
-        my_noteLayoutWidget = noteLayoutWidget( None,  [ self.getShotItemList(), self.taskFilterWidget, self.typeFilterWidget, self.statusFilterWidget, taskList ], self.queue )
-
-
-
-        my_noteLayoutWidget.SIGNAL_send_NoteContent.connect( self.createNewNote )
-
-        my_noteLayoutWidget.updateTaskFilterWidget([])
-
-
-        my_noteLayoutWidget.SIGNAL_createReply.connect( self.replyNoteSlot )
-        my_noteLayoutWidget.SIGNAL_createMultiReply.connect( self.multiReplyNoteSlot )
-
+        QtGui.QApplication.processEvents()
+        my_noteLayoutWidget = noteLayoutWidget( None,  [ self.getShotItemList(), self.taskFilterWidget, self.typeFilterWidget, self.statusFilterWidget, self.shotAssetFilterWidget, self.entityAssignedFilterWidget ],  threadQueue = self.queue, sgtkQueue = self.sgtkQueue )
         self.clearRightLayout()
         self.rightLayout.addWidget(  my_noteLayoutWidget  )
+        my_noteLayoutWidget.SIGNAL_send_NoteContent.connect( self.createNewNote )
+        my_noteLayoutWidget.updateTaskFilterWidget([])
+        my_noteLayoutWidget.SIGNAL_createReply.connect( self.replyNoteSlot )
+        my_noteLayoutWidget.SIGNAL_createMultiReply.connect( self.multiReplyNoteSlot )
+        
+        
+        if my_noteLayoutWidget.receiveFocusWidget :
+            if not self.shotAssetFilterWidget.widget.hasFocus() :
+                my_noteLayoutWidget.receiveFocusWidget.setFocus()
+        
+        QtGui.QApplication.processEvents()
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def createNewNote(self, obj) :
         
         self.queue.put( [ 0 , u"createNote"  , [ obj ] , None ] )
         #
 
+    ## @decorateur_try_except
+    def flush(self) :
+        while not self.queue.empty():
+            try:
+                self.queue.get(False)
+            except Empty:
+                continue
+            self.queue.task_done()
 
-    @decorateur_try_except
-    def shotTreeClicked(self, forceRedraw = False) :
+        self.shotTreeClicked(True) 
+
+
+    def selectFrom_ReturnPressed(self) :
+        if self.shotAssetFilterWidget.widget.text() == "" and self.entityAssignedFilterWidget.widget.text() == "":
+            return
+        else :
+            QtGui.QApplication.processEvents()
+            self.myTree.clearSelection()
+
+
+            root = self.myTree.invisibleRootItem()
         
+            child_count = root.childCount()
+            for i in range(child_count):
+                item = root.child(i)
+                for j in range(item.childCount() ) :
+                    shotAssetItem = item.child(j) 
+                    if not shotAssetItem.isHidden() :
+                        shotAssetItem.setSelected(True)
+
+            self.shotTreeClicked(True) 
+    ## @decorateur_try_except
+    def shotTreeClicked(self, forceRedraw = False) :
+        QtGui.QApplication.processEvents()
+
         if not self.myTree.selectedItems() :
             self.updateLauncherWidget( [{"clear":True}, 0 , "", "" ]) 
 
@@ -1173,7 +1364,12 @@ class Example(QtGui.QWidget):
 
 
         if redrawTreeNote  :
-            self.queue.put( [-10000 ,u"clearTree" , self.myTree2, None]  )
+            #self.queue.put( [-10000 ,u"clearTree" , self.myTree2, None]  )
+            self.clearTree( [self.myTree2] )
+            """
+            self.myTree2.clear()
+            self.myTree2.lastItem_edited = None
+            """
 
         selectedItemList = newItems 
 
@@ -1181,14 +1377,14 @@ class Example(QtGui.QWidget):
         for itemW in selectedItemList :
             if str(itemW.text(10)).startswith("shotAsset") :
 
-                if not itemW.sgData in shotItemList :
+                if not itemW.sgData in shotItemList and not itemW.isHidden() :
                     shotItemList.append(itemW.sgData )
 
             if str(itemW.text(10)).startswith("sequence") or str(itemW.text(10)).startswith("assetType")  :
 
 
                 for shotWItem in itemW.getShotWidgetList() :
-                    if not shotWItem.sgData in shotItemList :
+                    if not shotWItem.sgData in shotItemList and not shotWItem.isHidden() :
                         shotItemList.append(shotWItem.sgData )
         
         for sgData in shotItemList :
@@ -1197,8 +1393,7 @@ class Example(QtGui.QWidget):
 
         self.drawNote() 
 
-
-    @decorateur_try_except
+    ## @decorateur_try_except
     def getShotItemList(self, opt = None):
         shotItemList = []
         for itemW in self.myTree.selectedItems() :
@@ -1211,15 +1406,23 @@ class Example(QtGui.QWidget):
                     if not shotWItem.sgData in shotItemList :
                         shotItemList.append(shotWItem.sgData )
 
-        return shotItemList
+            if str(itemW.text(10)).startswith("assetType") :
+                for shotWItem in itemW.getShotWidgetList() :
+                    if not shotWItem.sgData in shotItemList :
+                        shotItemList.append(shotWItem.sgData )                
 
-    @decorateur_try_except   
+        if QtCore.Qt.AscendingOrder == self.myTree.header().sortIndicatorOrder() :        
+            return  sorted(shotItemList, key=itemgetter('code'))
+        else :
+            return  sorted(shotItemList, key=itemgetter('code'), reverse = True)
+
+    ## @decorateur_try_except   
     def updateTree2_withFilter(self, idx = None):
 
         self.iterateTree2()
         self.iterateTree2_HideEmptyBranch()
 
-
+    ## @decorateur_try_except 
     def iterateTree2(self, root = None ) :
         if not root : 
             root = self.myTree2.invisibleRootItem()
@@ -1231,7 +1434,41 @@ class Example(QtGui.QWidget):
                 if not item.do_hidding() :
                     self.iterateTree2(item)
 
-    @decorateur_try_except
+
+    def updateTree1_withFilter(self, udx= None, root = None ) :
+
+
+
+        if not root : 
+            root = self.myTree.invisibleRootItem()
+        filterText = self.shotAssetFilterWidget.getText()
+        assigneesText = self.entityAssignedFilterWidget.getText()
+        taskFilterList = self.taskFilterWidget.getfilterList()
+        
+
+
+        child_count = root.childCount()
+        for i in range(child_count):
+            item = root.child(i)
+            if hasattr(item, "do_hidding") :
+                if not item.do_hidding( filterText, assigneesText, taskFilterList ) : 
+                    self.updateTree1_withFilter(root = item) 
+  
+            else :
+                self.updateTree1_withFilter(root = item) 
+
+        child_count = self.myTree.invisibleRootItem().childCount()
+        for i in range(child_count):
+            group_shotAssetCount = self.myTree.invisibleRootItem().child(i).childCount()
+            numHiddenItem = 0
+            for j in range(group_shotAssetCount): 
+                numHiddenItem += int( self.myTree.invisibleRootItem().child(i).child(j).isHidden() )
+
+            self.myTree.invisibleRootItem().child(i).setHidden( numHiddenItem == group_shotAssetCount )
+            if udx or assigneesText :
+                self.myTree.invisibleRootItem().child(i).setExpanded( not numHiddenItem == group_shotAssetCount )
+
+    ## @decorateur_try_except
     def iterateTree2_HideEmptyBranch(self, root = None ) :
 
         for item in self.myTree2.findItems("type_", QtCore.Qt.MatchStartsWith | QtCore.Qt.MatchRecursive, 10) :
@@ -1241,7 +1478,6 @@ class Example(QtGui.QWidget):
             for i in range(child_count):
                 numHiddenItem += int( item.child(i).isHidden() )
 
-            #print numHiddenItem == child_count, ( numHiddenItem , child_count )
             if numHiddenItem == child_count :
                 item.setHidden(True)
 
@@ -1252,34 +1488,136 @@ class Example(QtGui.QWidget):
             for i in range(child_count):
                 numHiddenItem += int( item.child(i).isHidden() )
 
-            #print numHiddenItem == child_count, ( numHiddenItem , child_count )
             if numHiddenItem == child_count :
                 item.setHidden(True)
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def selectShotMyTree(self, shotItemList) :
         seqList = []
+        assetList = []
 
         self.myTree.clearSelection()
         for item in shotItemList :
-            #print item.sgData["shotCode"]
-            for myTreeItem in  self.myTree.findItems( item.sgData["shotCode"] , QtCore.Qt.MatchRecursive, 0 ) :
-                seqItem = myTreeItem.sgData["sg_sequence"]
-                if not seqItem :
-                    seqItem={"name" : "No Sequence"}
-                if not seqItem["name"] in seqList :
-                    seqList.append(seqItem["name"])
-                myTreeItem.setSelected(True)
 
+            for myTreeItem in  self.myTree.findItems( item.sgData["shotCode"] , QtCore.Qt.MatchRecursive, 0 ) :
+                
+                if myTreeItem.sgData.has_key("sg_sequence") :
+                    seqItem = myTreeItem.sgData["sg_sequence"]
+                    if not seqItem :
+                        seqItem={"name" : "No Sequence"}
+                    if not seqItem["name"] in seqList :
+                        seqList.append(seqItem["name"])
+
+                    myTreeItem.setSelected(True)
+                
+                elif myTreeItem.sgData.has_key("sg_asset_type") :
+                    assetItem = myTreeItem.sgData["sg_asset_type"]
+                    
+                    if not assetItem :
+                        assetItem={"name" : "No Asset Type"}
+                    else :
+                        assetItem={"name" : assetItem }
+                    if not assetItem["name"] in assetList :
+                        assetList.append(assetItem["name"])
+
+                    myTreeItem.setSelected(True)
 
         for i in range(self.myTree.topLevelItemCount()) :
             item = self.myTree.topLevelItem(i)
-            if item.sgData["name"] in seqList:
+            if item.sgData["name"] in seqList+assetList:
                 item.setExpanded(True)
             else :
                 item.setExpanded(False)
 
         self.drawNote()
+
+
+    ## @decorateur_try_except 
+    def toggleColumnDisplay(self, test ,index ) :
+        header = self.myTree2.header() 
+
+
+        if header.isSectionHidden(header.logicalIndex(header.visualIndex(index)) )  :
+            header.showSection(header.logicalIndex(header.visualIndex(index))) 
+        else :
+            header.hideSection(header.logicalIndex(header.visualIndex(index))) 
+
+        self.myTree2.columHasMoved(0,0,0, save=True)
+
+
+    ## @decorateur_try_except
+    def myTree2headerMenu(self ,  pos) :
+
+
+        globalPos = self.myTree2.mapToGlobal(pos);
+
+
+        menu = QtGui.QMenu()
+        
+        header = self.myTree2.header() 
+        fct = lambda test, index = 0 : self.toggleColumnDisplay(test, index)
+        act =  QtGui.QAction("Content", menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(0)) ) )
+        act.triggered.connect(fct)
+        menu.addAction( act )
+
+
+        fct = lambda test, index = 1 : self.toggleColumnDisplay(index, index)
+        act =  QtGui.QAction("Tasks"  , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(1)) ) )
+        act.triggered.connect(fct)
+        menu.addAction( act )
+
+        fct = lambda test, index = 2 : self.toggleColumnDisplay(index, index)
+        act =  QtGui.QAction("Type"  , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(2)) ) )
+        act.triggered.connect(fct)
+        menu.addAction( act )
+
+        fct = lambda test, index = 9 : self.toggleColumnDisplay(index, index)
+        act =  QtGui.QAction("Created_at" , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(9)) ) )
+        act.triggered.connect(fct)
+        menu.addAction( act )
+
+        fct = lambda test, index = 4 : self.toggleColumnDisplay(index, index)
+        act =  QtGui.QAction("user"  , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(4)) ) )
+        act.triggered.connect(fct)
+        menu.addAction( act )
+
+        fct = lambda test, index = 5 : self.toggleColumnDisplay(index, index)
+        act =  QtGui.QAction("Version Number (v---)"  , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(5)) ) )
+        act.triggered.connect(fct)
+        menu.addAction( act )
+
+        fct = lambda test, index = 6 : self.toggleColumnDisplay(index, index)
+        act =  QtGui.QAction("Shot/Asset" , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(6)) ) )
+        act.triggered.connect(fct)
+        menu.addAction( act )
+
+        fct = lambda test, index = 7 : self.toggleColumnDisplay(index, index)
+        act =  QtGui.QAction("Replies" , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(7)) ) )
+        act.triggered.connect(fct)
+        menu.addAction( act )
+
+        fct = lambda test, index = 8 : self.toggleColumnDisplay(index, index)
+        act =  QtGui.QAction("Assignement" , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(8)) ) )
+        act.triggered.connect(fct)
+        menu.addAction( act )
+
+
+        menu.exec_(globalPos)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1295,61 +1633,73 @@ class Example(QtGui.QWidget):
     #####
     ############################################
 
-    @decorateur_try_except
+    def setShotAsset_taskAssigned(self, obj):
+        print "********* ", obj
+        # obj[0] entity type
+        # obj[1] entity id
+        # obj[2] taskAssgined List
+
+        #self.myTree.findItems( )
+        return
+
+    ## @decorateur_try_except
     def updateLauncherWidget(self, obj) :
+
+
         if not self.engineName in ["tk-shotgun", "tk-desktop", "tk-shell"] :
             return 
-            
+        if not self.SGTK_ENGINE :
+            return
+
+
+        QtGui.QApplication.processEvents()
         w = self.mainLayout.itemAt(2)
         if w :
-            w = w.widget()
+            bar = w.widget()
             if obj[1] == 0 :
-                w.setParent(None)
-                w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True ) 
-                w.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")                    
-                self.mainLayout.addWidget(w)
+                bar.setParent(None)
+                bar.deleteLater()            
+                self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True,  SGTK_ENGINE=self.SGTK_ENGINE ,parent = self ) )
+                QtGui.QApplication.processEvents()
                 return 
             
-            if w.shotId == obj[1] and w.taskName == obj[2] :
+            if bar.shotId == obj[1] and bar.taskName == obj[2] :
+
                 if obj[0].has_key("clear"):
                     return
                 else :
-                    if w.empty :
-                        w.setParent(None)
-                        w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3] ) 
-                        w.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")
+                    if bar.empty :
 
-                        self.mainLayout.addWidget(w)
-
+                        bar.setParent(None)
+                        bar.deleteLater()
+                        self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3] , SGTK_ENGINE=self.SGTK_ENGINE, parent = self)  )
+                        QtGui.QApplication.processEvents()
+                    #QtGui.QApplication.processEvents()
                     return
             else :
+
                 if obj[0].has_key("clear") :
-                    w.setParent(None)
-                    w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True ) 
-                    w.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")
-                    self.mainLayout.addWidget(w)
+                    bar.setParent(None)
+                    bar.deleteLater()
+                    self.mainLayout.addWidget(  LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True , SGTK_ENGINE=self.SGTK_ENGINE,  parent = self )  )
+                    QtGui.QApplication.processEvents()
                 else :
                     return
-                    w.setParent(None)
-                    w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True ) 
-                    w.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")                    
-                    self.mainLayout.addWidget(w)
+                    
         else :
-            w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True ) 
-            w.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")                    
-            self.mainLayout.addWidget(w)
+            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True ,  SGTK_ENGINE=self.SGTK_ENGINE , parent = self )   )
 
 
         if not obj[0].has_key("clear") :
-            w = LaunchApp_widget( obj[0], obj[1], obj[2], obj[3] ) 
-            w.setStyleSheet("LaunchApp_widget{background-color: qlineargradient( x1: 0.7, y1: 0, x2: 1, y2: 0, stop: 0 #2A2A2A, stop: 1 #425C73 )}")
-            self.mainLayout.addWidget(w)
+            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3],  SGTK_ENGINE=self.SGTK_ENGINE, parent = self )  )
 
-    @decorateur_try_except
+
+
+    ## @decorateur_try_except
     def updateProgressBar(self, value) :
         self.progressBar.setValue(value)
  
-    @decorateur_try_except
+    ## @decorateur_try_except
     def refreshNote(self, obj):
         for noteItemWidget in self.myTree2.findItems( "note_%i"%obj[0]['id'], QtCore.Qt.MatchRecursive, 10 ) :
 
@@ -1368,7 +1718,7 @@ class Example(QtGui.QWidget):
                 self.addNote([noteDict])
         self.updateTree2_withFilter()
   
-    @decorateur_try_except
+    ## @decorateur_try_except
     def addNote(self, obj ) :
 
         for noteDict in obj : # boucler chaques notes
@@ -1386,25 +1736,27 @@ class Example(QtGui.QWidget):
                     taskWidgetItem = taskWidgetItemList[0]
 
 
-                noteWidget( taskWidgetItem, noteDict, self.taskFilterWidget, self.statusFilterWidget, self.typeFilterWidget, self.userNameFilterWidget, self.contentFilterWidget,  self.entityAssignedFilterWidget  )
+                noteWidget( taskWidgetItem, noteDict, self.taskFilterWidget, self.statusFilterWidget, self.typeFilterWidget, self.userNameFilterWidget, self.contentFilterWidget,  self.entityAssignedFilterWidget, self.shotAssetFilterWidget  )
                 taskWidgetItem.setHidden(False)
 
 
                 taskValuesList = self.taskFilterWidget.retrieveValueFromName( taskName )
-                self.queue.put( [ 2 , u"queryNoteVersion"  , [ noteDict["shotId"] ,taskValuesList  ,noteDict["id"] ] , None ] )
+                self.queue.put( [ 2 , u"queryNoteVersion"  , [ noteDict["shotId"] ,taskValuesList  ,noteDict["id"], noteDict["shotType"] ] , None ] )
                 
-                self.queue.put( [ 2 , u"queryTaskAssigned"  , [{'id' : noteDict["shotId"],'type' : 'Shot'}, taskValuesList,  noteDict["id"]]   , None ] )
+                self.queue.put( [ 2 , u"queryTaskAssigned"  , [{'id' : noteDict["shotId"],'type' : noteDict["shotType"]}, taskValuesList,  noteDict["id"]]   , None ] )
                         #
 
-    @decorateur_try_except           
+    ## @decorateur_try_except           
     def updateDrawNote_versions(self, obj) :
+
         noteLayoutQItem = self.rightLayout.itemAt(0)
-        noteLayoutWidget= noteLayoutQItem.widget()
-        if noteLayoutWidget.data == None:
-            noteLayoutWidget.fill_versionWidgetCombo(obj)
+        if noteLayoutQItem :
+            noteLayoutWidget= noteLayoutQItem.widget()
+            if noteLayoutWidget.data == None:
+                noteLayoutWidget.fill_versionWidgetCombo(obj)
     
     #
-    @decorateur_try_except
+    ## @decorateur_try_except
     def setTreeThumbNail(self, obj) :
         treeWidgetItemList =  self.findInTree(obj[0])
 
@@ -1412,7 +1764,7 @@ class Example(QtGui.QWidget):
             treeWidgetItem.setIcon(0, QtGui.QIcon(obj[1]))
 
                 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def getShotIds(self, opt = None):
         shotItemList = []
         for itemW in self.myTree.selectedItems() :
@@ -1427,19 +1779,24 @@ class Example(QtGui.QWidget):
 
         return shotItemList
     ##
-    @decorateur_try_except
+    ## @decorateur_try_except
     def setNoteList(self, obj) : # by shot
+
         # obj[0][0] : shot/Asset treeWidget name... ( item.text(10) ) 
-        # obj[0][1] : shot/Asset code ... ( the shotgun real one ) 
-        # obj[0][2] : shot/Asset Id ...   ( the shotgun real one )
+        # obj[0][1] : shot/Asset code ...   ( the shotgun real one ) 
+        # obj[0][2] : shot/Asset Id   ...   ( the shotgun real one )
+        # obj[0][3] : shot/Asset Type ...   ( the shotgun real one )
+
         # obj[1][] : List of notes 
 
         # obj[2][] : a True boulean when notes has been : re-quiered / quiered as a spawned note for creation   
+        if not self.myTree2.findItems( "EMPTYNOTE" , QtCore.Qt.MatchExactly, 10 ) :
+            emptyWidget(self.myTree2 )
 
         if not obj[0][0] in self.getShotIds() :
             # if the shot_name relative to the incoming note(s) isnt anymore in the current shot selection ,
             return
-        
+
 
         # if there's no task Widget holder, create one... 
         # I (re)name it dontCarre, because i had created one per task before
@@ -1470,19 +1827,20 @@ class Example(QtGui.QWidget):
                     
                     noteDict["shotCode"] = obj[0][1]
                     noteDict["shotId"] = obj[0][2]
-                    
+                    noteDict["shotType"] = obj[0][3]
 
-                    noteWidget( taskWidgetItem, noteDict, self.taskFilterWidget, self.statusFilterWidget, self.typeFilterWidget, self.userNameFilterWidget, self.contentFilterWidget,  self.entityAssignedFilterWidget )
-                    
+
+                    noteWidget( taskWidgetItem, noteDict, self.taskFilterWidget, self.statusFilterWidget, self.typeFilterWidget, self.userNameFilterWidget, self.contentFilterWidget,  self.entityAssignedFilterWidget, self.shotAssetFilterWidget )
                     taskValuesList = self.taskFilterWidget.retrieveValueFromName( taskName )
-                    self.queue.put( [ 2 , u"queryNoteVersion"  , [ noteDict["shotId"] ,taskValuesList  ,noteDict["id"] ] , None ] )
-                    self.queue.put( [ 2 , u"queryTaskAssigned"  , [{'id' : noteDict["shotId"],'type' : 'Shot'}, taskValuesList,  noteDict["id"]]   , None ] )
-                        #
-    ###
+
+                    self.queue.put( [ 2 , u"queryNoteVersion"  , [ noteDict["shotId"] ,taskValuesList  ,noteDict["id"], noteDict["shotType"] ] , None ] )
+                    self.queue.put( [ 2 , u"queryTaskAssigned"  , [{'id' : noteDict["shotId"],'type' : noteDict["shotType"]  }, taskValuesList,  noteDict["id"]]   , None ] )
+
+
         self.updateTree2_withFilter()
 
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def fillSeqShotTree(self, data ):
         typeEntity = "shot"
         shotDictList = data
@@ -1496,7 +1854,7 @@ class Example(QtGui.QWidget):
                 seqItem = None
 
                 if not nullSequenceList :
-                    seqItem = sequenceWidget(root, {"name": u"No Sequence", "id": 0 })
+                    seqItem = sequenceWidget(root, {"name": u"No Sequence", "id": 0,   "type" : "Sequence" } )
                     shotItem = shotAssetWidget(seqItem, shot_sgData, typeEntity)
                 else :
                     shotItem = shotAssetWidget(nullSequenceList[0], shot_sgData, typeEntity)
@@ -1511,12 +1869,22 @@ class Example(QtGui.QWidget):
                     shotItem = shotAssetWidget(seqItem, shot_sgData, typeEntity)
 
             if shot_sgData["id"] == self.InitOnShotName["id"] :
+
+                self.sg.getAvailableTasks( [shot_sgData, shotItem] , None  )
                 shotItem.setSelected(True)
+                
+            else :
+                self.queue.put( [ 30 , u"getAvailableTasks"  , [shot_sgData, shotItem] , self.updateTree1_withFilter  ] )
+                
+
+
+
+        self.updateTree1_withFilter()
 
         self.queue.put( [ 150 , u"downloadThumbnail"  , shotDictList , self.findInTree ] )
 
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def fillAssetTree(self, data ):
         typeEntity = "asset"
         shotDictList = data
@@ -1532,13 +1900,13 @@ class Example(QtGui.QWidget):
                 seqItem = None
 
                 if not nullSequenceList :
-                    seqItem = assetWidget(root, "No Asset Type")
+                    seqItem = assetWidget(root, {"name" : "No Asset Type",  "type" : "Asset" } )
                     shotItem = shotAssetWidget(seqItem, shot_sgData, typeEntity)
                 else :
                     shotItem = shotAssetWidget(nullSequenceList[0], shot_sgData, typeEntity)
 
             elif not shot_sgData["sg_asset_type"] in seqList :
-                seqItem = assetWidget(root, shot_sgData["sg_asset_type"])
+                seqItem = assetWidget(root, {"name" : shot_sgData["sg_asset_type"], "type" : "Asset" } )
                 shotItem = shotAssetWidget(seqItem, shot_sgData, typeEntity)
                 seqList.append( shot_sgData["sg_asset_type"])
 
@@ -1548,45 +1916,76 @@ class Example(QtGui.QWidget):
 
             if shot_sgData["id"] == self.InitOnShotName["id"] :
                 shotItem.setSelected(True)
+                self.queue.join()
+            else :
+                self.queue.put( [ 30 , u"getAvailableTasks"  , [shot_sgData, shotItem] , self.updateTree1_withFilter ] )
+
+        self.updateTree1_withFilter()
 
         self.queue.put( [ 150 , u"downloadThumbnail"  , shotDictList , self.findInTree ] )
 
-
- 
     ####
-    @decorateur_try_except
+    ## @decorateur_try_except
     def clearTree(self, obj) :
+        for note in obj[0].findItems("note_", QtCore.Qt.MatchStartsWith  | QtCore.Qt.MatchRecursive ,10) :
+            note.setHidden(True) 
+
+
         obj[0].clear()
         obj[0].lastItem_edited = None
 
     #####
-    @decorateur_try_except
+    ## @decorateur_try_except
     def queryNoteContent(self, obj) :
 
         sg_noteContentList = obj[0]
-        if len(sg_noteContentList) == 0 :
-            pass
-        elif len(sg_noteContentList) == 1 :
+        selectedNoteList = self.myTree2.selectedItems()
+        
 
-            my_noteLayoutWidget = noteLayoutWidget( sg_noteContentList )
-            my_noteLayoutWidget.SIGNAL_createReply.connect( self.replyNoteSlot)
+        if not obj[1] :
+            if len(sg_noteContentList) == 0  :
+                return
 
+
+            if len(selectedNoteList) != len(sg_noteContentList)  :
+                return
+
+            matchSelection = 0
+            for selectedNote in selectedNoteList :
+                for sg_noteContent in sg_noteContentList :
+                    if not selectedNote.sgData == None :
+                        if selectedNote.sgData['id'] == sg_noteContent['id'] :
+                            matchSelection +=1
+
+            if matchSelection != len(selectedNoteList)  :
+                return
+
+
+
+        QtGui.QApplication.processEvents()
+        if len(sg_noteContentList) == 1 :
+            my_noteLayoutWidget = noteLayoutWidget( sg_noteContentList, [ None , self.taskFilterWidget, None, None, None ] )
             self.clearRightLayout()
             self.rightLayout.addWidget(  my_noteLayoutWidget  )
-            
+            my_noteLayoutWidget.SIGNAL_createReply.connect( self.replyNoteSlot)
+            if my_noteLayoutWidget.receiveFocusWidget :
+                if not self.shotAssetFilterWidget.widget.hasFocus() :
+                    my_noteLayoutWidget.receiveFocusWidget.setFocus()
+
         else :
-
             my_noteLayoutWidget = noteLayoutWidget( sg_noteContentList )
-            my_noteLayoutWidget.SIGNAL_createMultiReply.connect( self.multiReplyNoteSlot)
-
             self.clearRightLayout()
             self.rightLayout.addWidget(  my_noteLayoutWidget  ) 
+            my_noteLayoutWidget.SIGNAL_createMultiReply.connect( self.multiReplyNoteSlot)
 
+        QtGui.QApplication.processEvents()
+             
     ######
-    @decorateur_try_except
+    ## @decorateur_try_except
     def noteTreeUpdated(self, obj) :
         
         int_noteId = obj[0]["id"]
+
         selectedItemList = self.myTree2.selectedItems()
         
         noteData = []
@@ -1598,9 +1997,9 @@ class Example(QtGui.QWidget):
             for treeNoteItem in self.myTree2.findItems("note_%i"%int_noteId , QtCore.Qt.MatchRecursive,10 ) :
                 treeNoteItem.updateData({ "sg_status_list" : obj[0]["new_sg_status_list"] })
 
-
-
-        self.queue.put( [ -1 , u"queryNoteVersion"  , [ 0 , [],  int_noteId  ] , None ] )
+        noteByIdList = self.myTree2.findItems("note_%i"%int_noteId, QtCore.Qt.MatchRecursive,10) 
+        if noteByIdList == 1 :
+            self.queue.put( [ -1 , u"queryNoteVersion"  , [ 0 , [],  int_noteId,noteByIdList[0].sgData["shotType"]  ] , None ] )
 
 
 
@@ -1608,8 +2007,7 @@ class Example(QtGui.QWidget):
             self.queue.put( [ -1 , u"queryNoteContent"  , noteData , None ] )
 
 
-    
-    @decorateur_try_except   
+    ## @decorateur_try_except   
     def queryNoteVersion(self, obj) :
         for noteWidget in self.myTree2.findItems("note_%i"%obj[0], QtCore.Qt.MatchRecursive,10) :
             
@@ -1618,17 +2016,15 @@ class Example(QtGui.QWidget):
             noteWidget.setText(11, str(obj[3]))
             noteWidget.set_my_bacgroundColor()
 
-    @decorateur_try_except
+    ## @decorateur_try_except
     def queryNoteTaskAssigned(self, obj) :
         for noteWidget in self.myTree2.findItems("note_%i"%obj[0], QtCore.Qt.MatchRecursive,10) :
             noteWidget.setText(8, str("\n".join(obj[1]) ) )
             self.updateTree2_withFilter()
 
-def main():
-    
 
+def main():        
 
-    app = QtGui.QApplication(sys.argv)
     QtGui.QApplication.setStyle("plastique")
 
     palette_file = getStyle("dark_palette.qpalette")
@@ -1641,14 +2037,19 @@ def main():
     _dark_palette = QtGui.QPalette()
     file_in.__rshift__(_dark_palette)
     fh.close()
-    
+
     # set the std selection bg color to be 'shotgun blue'
     _dark_palette.setBrush(QtGui.QPalette.Highlight, QtGui.QBrush(QtGui.QColor("#30A7E3")))
     _dark_palette.setBrush(QtGui.QPalette.HighlightedText, QtGui.QBrush(QtGui.QColor("#FFFFFF")))
-    
+
     # and associate it with the qapplication
     QtGui.QApplication.setPalette(_dark_palette)
 
+
+    app = QtGui.QApplication(sys.argv)
+    
+    
+    
     ex = Example()
     
 

@@ -36,7 +36,7 @@ class noteContentLayout(QtGui.QWidget) :
     SIGNAL_createMultiReply = _signal(object)
     SIGNAL_send_NoteContent = _signal(object)
 
-    @decorateur_try_except
+    ## ## @decorateur_try_except
     def __init__(self, dataType , data , noteData = None, parent = None) :
         super(noteContentLayout, self).__init__(parent ) 
 
@@ -61,6 +61,8 @@ class noteContentLayout(QtGui.QWidget) :
         authorTxt = "unknown" 
 
         self.attachmentLayout = QtGui.QHBoxLayout()
+
+
         self.Qt_noteContent = my_textEdit( "", editable = bool(self.data) , parent = self) # QtGui.QTextEdit( )
 
 
@@ -113,11 +115,14 @@ class noteContentLayout(QtGui.QWidget) :
                     self.Qt_noteContent.setText(u"Type a reply for all the selected notes") 
                 else :
                     self.Qt_noteContent.setText(u"Type a reply")
-
+                    self.Qt_noteContent.selectAll()
+                    self.Qt_noteContent.SIGNAL_return.connect(self.replyNoteSlot)
 
             elif dataType == "Note":
                 self.Qt_noteContent.setText(u"Type a note")
-
+                self.Qt_noteContent.setFocus()
+                self.Qt_noteContent.selectAll()
+                self.Qt_noteContent.SIGNAL_return.connect(self.createNoteSlot)
             layout.setContentsMargins(0,0,0,0)
 
             layout.addLayout(layoutContainer)
@@ -190,10 +195,11 @@ class noteContentLayout(QtGui.QWidget) :
 
         style = "background-color: red;"
 
-    @decorateur_try_except
+    ## ## @decorateur_try_except
     def editNoteContent(self, mouseEvent ) :
         print "edit me"
-    @decorateur_try_except
+    
+    ## ## @decorateur_try_except
     def updateNodeDataStatus(self, comboIdx) :
 
         if self.statusLabel.currentIndex() == 0 :
@@ -203,7 +209,7 @@ class noteContentLayout(QtGui.QWidget) :
         elif self.statusLabel.currentIndex() == 2 :
             self.noteData[0]["new_sg_status_list"] = "ip"
     
-
+    ## ## @decorateur_try_except
     def addAttachment(self) :
 
         attacheFile = QtGui.QFileDialog.getOpenFileName()
@@ -226,7 +232,7 @@ class noteContentLayout(QtGui.QWidget) :
             imageWidget.SIGNAL_imageClicked.connect(self.editImageDisplay)
             self.attachmentLayout.insertWidget(0, imageWidget )
 
-
+    ## ## @decorateur_try_except
     def addScreenShot(self) :
 
 
@@ -246,8 +252,7 @@ class noteContentLayout(QtGui.QWidget) :
 
             self.attachmentLayout.insertWidget(0, imageWidget )
 
-
-
+    ## ## @decorateur_try_except
     def createNoteSlot(self) :
 
 
@@ -270,9 +275,7 @@ class noteContentLayout(QtGui.QWidget) :
 
         self.SIGNAL_send_NoteContent.emit(  [  { "content" : noteContent , "uploads" : attachementFile  }]) #,  "subject" : "paf pas" } ] )
 
-
-
-
+    ## ## @decorateur_try_except
     def replyNoteSlot(self):
 
         replyContent = ""
@@ -301,15 +304,14 @@ class noteContentLayout(QtGui.QWidget) :
 
             self.SIGNAL_createMultiReply.emit(  [  { "content" : replyContent , "uploads" : attachementFile } , valueList ]  )
 
-
-    @decorateur_try_except
+    ## ## @decorateur_try_except
     def showImageDisplay(self, imageFileName ) :
 
         imV = imageDisplay.ImageViewer(self)
         imV.setImage(imageFileName)
         imV.show()
 
-    @decorateur_try_except
+    ## ## @decorateur_try_except
     def editImageDisplay(self, imageFileName ) :
 
 
@@ -321,7 +323,7 @@ class noteContentLayout(QtGui.QWidget) :
         window.openImage(imageFileName)
         window.show()
 
-
+    ## ## @decorateur_try_except
     def refresh_attachementLayout(self) :
         for itemIdx in range(self.attachmentLayout.count() ):
             widget = self.attachmentLayout.itemAt(itemIdx).widget()
@@ -344,15 +346,63 @@ class noteLayoutWidget(QtGui.QWidget) :
     SIGNAL_createMultiReply = _signal(object)
     SIGNAL_send_NoteContent = _signal(object)
 
-    @decorateur_try_except
-    def __init__(self, data, comboFilterWidgetList = None, threadQueue = None, color = False, parent= None) : 
+    ## ## @decorateur_try_except
+    def filterTasks(self, indexList):
+
+
+        availableTaskList = self.shotList[self.shotComboBox.currentIndex()]["sgAvailableTaskList"]
+
+
+        assignedToTxt = self.top_assigneesFilterWidget.widget.text()
+        if not isinstance(assignedToTxt, unicode):
+            assignedToTxt = unicode(assignedToTxt.toUtf8() , "utf-8" )
+
+        if not assignedToTxt == "" :
+
+            availableTaskList= []
+            for tasks in self.shotList[self.shotComboBox.currentIndex()]["sgtaskDictWithAssignees"].keys() :
+                #print assignedToTxt.upper() , " ".join(comboFilterWidgetList[0][idx]["sgtaskDictWithAssignees"][tasks]).upper() 
+                if assignedToTxt.upper() in " ".join(self.shotList[self.shotComboBox.currentIndex()]["sgtaskDictWithAssignees"][tasks]).upper() :
+                    
+                    availableTaskList.append(tasks)
+
+
+
+        self.taskFilterWidget.setMyCurrentFromIndexes( indexList, availableTaskList)
+
+
+        if self.taskFilterWidget.widget.count() == 1 :
+            self.taskFilterWidget.drawComplex = False
+        else :
+            self.taskFilterWidget.drawComplex = True
+
+
+        QtGui.QApplication.processEvents()
+        self.taskFilterWidget.widget.repaint()
+
+
+    def disableNoteLayout(self, filterIsEmpty) :
+        if not filterIsEmpty :
+            self.setEnabled(True)
+        else :
+            self.setEnabled(False)
+
+
+    def __init__(self, data, comboFilterWidgetList = None, threadQueue = None, sgtkQueue = None, color = False, parent= None) : 
 
         super(noteLayoutWidget, self).__init__(parent ) 
+
+        self.top_assigneesFilterWidget = None
+
+
         self.taskFilterWidget = None
         self.shotWidgetItemList = None
         self.my_versionWidgetCombo = None
         self.queue = None
         self.myNoteBox = None
+        self.receiveFocusWidget = None
+        self.shotList = None
+        self.getFocus = True
 
         self.data = data
 
@@ -386,34 +436,93 @@ class noteLayoutWidget(QtGui.QWidget) :
 
         elif  comboFilterWidgetList[0] :
 
+            self.top_assigneesFilterWidget  = comboFilterWidgetList[5]
+
             self.queue = threadQueue
+            self.sgtkQueue = sgtkQueue
 
             idx = 0
-            self.shotComboBox = QtGui.QComboBox( parent= self )
-            for shotItem in comboFilterWidgetList[0] :
-                self.shotComboBox.addItem( shotItem["code"])
-
+            self.shotComboBox = comboFilterWidget3( comboFilterWidgetList[4], comboFilterWidgetList[5],  parent= self )         
+            self.shotComboBox.fillItem(comboFilterWidgetList[0] )
             self.shotWidgetItemList = comboFilterWidgetList[0]
-            self.shotComboBox.currentIndexChanged.connect(self.getVersion)
-
-
-            titleGridLayout.addWidget(QtGui.QLabel("Shot" , parent= self ), idx,0)
-            titleGridLayout.addWidget(self.shotComboBox , idx, 1)
             
-            if len(comboFilterWidgetList[0]) ==1:
-                self.shotComboBox.setEnabled(False)
+
+            fct = lambda idx , getFocus, shotItemList = comboFilterWidgetList[0] , top_taskFilterWidget = comboFilterWidgetList[1] ,  top_assigneesFilterWidget =  comboFilterWidgetList[5] : self.refillTaskFilter( idx, getFocus, shotItemList,  top_taskFilterWidget, top_assigneesFilterWidget )
+            self.shotComboBox.SIGNAL_currentIndexChanged.connect( fct )
+            self.shotComboBox.SIGNAL_filterResultEmpty.connect( self.disableNoteLayout )
+            
+
+            titleGridLayout.addWidget(QtGui.QLabel("Shot/Asset" , parent= self ), idx,0)
+            titleGridLayout.addWidget(self.shotComboBox , idx, 1)
             
 
             idx +=1
-            self.taskFilterWidget = comboFilterWidget2( *comboFilterWidgetList[1].retrieveDict(), showLabel = False,  parent= self )
-            self.taskFilterWidget.widget.currentIndexChanged.connect(  self.getVersion)
-            comboFilterWidgetList[1].SIGNAL_currentIndexesChanged.connect(self.taskFilterWidget.setMyCurrentFromIndexes)
+
+
+
+            typeDict , entriesDictList = comboFilterWidgetList[1].retrieveDict()
+            myShotItem = comboFilterWidgetList[0][0]
+
+
+            assignedToTxt = comboFilterWidgetList[5].widget.text()
+            if not isinstance(assignedToTxt, unicode):
+                assignedToTxt = unicode(assignedToTxt.toUtf8() , "utf-8" )
+
+            availableTaskList = myShotItem["sgAvailableTaskList"]
+            if not assignedToTxt == "" :
+
+                availableTaskList= []
+                for tasks in myShotItem["sgtaskDictWithAssignees"].keys() :
+                    #print assignedToTxt.upper() , " ".join(comboFilterWidgetList[0][idx]["sgtaskDictWithAssignees"][tasks]).upper() 
+                    if assignedToTxt.upper() in " ".join(myShotItem["sgtaskDictWithAssignees"][tasks]).upper() :
+                        
+                        availableTaskList.append(tasks)
+
+
+            checkNumber = 0
+            for idx in range(len(entriesDictList)) :
+
+                if entriesDictList[idx]["text"] == "NoTask"  : 
+                    if not checkNumber :
+                        entriesDictList[idx]["checked"] = True
+                    continue
+
+
+                if len(availableTaskList) == 0 :
+                    if "NoTask" in entriesDictList[idx]["values"] :
+                        entriesDictList[idx]["checked"] = True
+                    else :
+                        entriesDictList[idx]["checked"] = False
+                else :
+                    test = False
+                    for availableTask in availableTaskList :
+                        if availableTask in entriesDictList[idx]["values"] :
+                            test = True
+
+                    if  entriesDictList[idx]["checked"] == True and not test :
+                        entriesDictList[idx]["checked"] = False
+
+                if  entriesDictList[idx]["checked"] == True :
+                    checkNumber += 1
+
+
+
+            self.taskFilterWidget = comboFilterWidget2( typeDict , entriesDictList, showLabel = False,  parent= self )
+            self.taskFilterWidget.widget.currentIndexChanged.connect(  self.getVersion )
+            if self.taskFilterWidget.widget.count() == 1 :
+                self.taskFilterWidget.drawComplex = False
+            self.shotList = comboFilterWidgetList[0]
+            comboFilterWidgetList[1].SIGNAL_TaskcurrentIndexesChanged.connect(self.filterTasks)
+            
             titleGridLayout.addWidget(QtGui.QLabel("Task" , parent= self ), idx,0)
             titleGridLayout.addWidget(self.taskFilterWidget , idx,1)
 
 
             idx +=1
             self.typeFilterWidget = comboFilterWidget2(*comboFilterWidgetList[2].retrieveDict(),showLabel = False,  parent= self )
+            if self.typeFilterWidget.widget.count() == 1 :
+                self.typeFilterWidget.drawComplex = False
+
             comboFilterWidgetList[2].SIGNAL_currentIndexesChanged.connect(self.typeFilterWidget.setMyCurrentFromIndexes)
             titleGridLayout.addWidget(QtGui.QLabel("Type" , parent= self ), idx,0)
             titleGridLayout.addWidget(self.typeFilterWidget, idx,1)
@@ -422,6 +531,9 @@ class noteLayoutWidget(QtGui.QWidget) :
 
             idx +=1
             self.statusFilterWidget = comboFilterWidget2(*comboFilterWidgetList[3].retrieveDict(),showLabel = False ,  parent= self )
+            if self.statusFilterWidget.widget.count() == 1 :
+                self.statusFilterWidget.drawComplex = False
+
             comboFilterWidgetList[3].SIGNAL_currentIndexesChanged.connect(self.statusFilterWidget.setMyCurrentFromIndexes)
             titleGridLayout.addWidget(QtGui.QLabel("Status" , parent = self ), idx,0)
             titleGridLayout.addWidget(self.statusFilterWidget , idx,1)
@@ -429,13 +541,9 @@ class noteLayoutWidget(QtGui.QWidget) :
             self.titreLabel = QtGui.QLineEdit("", parent = self)
             self.titreLabel.hide()
 
-            """
-            idx +=1
-            titleGridLayout.addWidget(titreLabelText  ,idx,0)
-            titleGridLayout.addWidget(self.titreLabel ,idx,1)
-            """
 
             self.my_versionWidgetCombo = versionWidgetCombo( parent = self )
+            self.my_versionWidgetCombo.versionQtCombo.currentIndexChanged.connect( self.setTextEditOnFocus )
             layout.addWidget( self.my_versionWidgetCombo )
 
             # separator
@@ -446,7 +554,7 @@ class noteLayoutWidget(QtGui.QWidget) :
 
 
         else :
-            selectLabel = QtGui.QLabel("<font color:#F0F0F0><b> Select a Shot </b></font>" , parent= self )
+            selectLabel = QtGui.QLabel("<font color:#F0F0F0><b> Select a Shot or a Note </b></font>" , parent= self )
             selectLabel.setAlignment(QtCore.Qt.AlignCenter) 
             font = selectLabel.font()
             font.setPointSize(10)
@@ -468,8 +576,22 @@ class noteLayoutWidget(QtGui.QWidget) :
                     versionLayout = QtGui.QHBoxLayout()
                     versionLayout.setContentsMargins(0,0,0,0)
                     layout.addLayout(versionLayout )
+
+                    idx = 0
                     for versionDict in noteLinkVersion :
-                        versionLayout.addWidget(versionWidget(versionDict , parent = self) )
+                        taskIcon = None
+                        if versionDict["sg_task"] :
+                            taskIcon = comboFilterWidgetList[1].retrieveIconFromValue(versionDict["sg_task"]["name"])
+
+                        if idx == 0 and len(noteLinkVersion)  > 1 :
+                            shortCutCodeList = ["Ctrl+Space"]
+                        else :
+                            shortCutCodeList = ["Ctrl+Alt+Space"]
+
+                        versionLayout.addWidget(versionWidget(versionDict , shortCutCodeList = shortCutCodeList ,taskIcon = taskIcon, parent = self) )
+
+                        idx+=1
+
                     if len(noteLinkVersion) == 2 :
                         labelArrow =  QtGui.QLabel( parent= self )
                         labelArrow.setPixmap(QtGui.QPixmap(getRessources("versionArrow.png" ) ) )
@@ -492,7 +614,7 @@ class noteLayoutWidget(QtGui.QWidget) :
         elif  comboFilterWidgetList[0] :
             my_noteContentLayout = noteContentLayout("Note", None,  noteData = None, parent = self )
             my_noteContentLayout.SIGNAL_send_NoteContent.connect(self.todo)
-
+            self.receiveFocusWidget = my_noteContentLayout.Qt_noteContent
             contentLayout.addWidget(my_noteContentLayout)
 
 
@@ -555,6 +677,8 @@ class noteLayoutWidget(QtGui.QWidget) :
             if not self.multiDisplay :
                 
                 myEmptyNewReply = noteContentLayout("Reply", None,    noteData = self.data, parent = self )
+                self.receiveFocusWidget = myEmptyNewReply.Qt_noteContent
+
                 myEmptyNewReply.SIGNAL_createReply.connect( self.replyNoteSlot )
                 
                 replyDataList = self.data[0]["queriedReplies"]
@@ -617,9 +741,33 @@ class noteLayoutWidget(QtGui.QWidget) :
                 
                 layout.addWidget(myEmptyNewReply)
 
-    #def moveScrollBarToBottom(self, min, max):
+
+    ## ## @decorateur_try_except
+    def refillTaskFilter(self, idx, getFocus, shotItemList, top_taskFilterWidget, top_assigneesFilterWidget  ):
+       
+        self.getFocus = getFocus
+
+        availableTaskList = shotItemList[idx]["sgAvailableTaskList"]
+        
+        assignedToTxt = top_assigneesFilterWidget.widget.text()
+        if not isinstance(assignedToTxt, unicode):
+            assignedToTxt = unicode(assignedToTxt.toUtf8() , "utf-8" )
+
+        if not assignedToTxt == "" :
+
+            availableTaskList= []
+            for tasks in shotItemList[idx]["sgtaskDictWithAssignees"].keys() :
+                #print assignedToTxt.upper() , " ".join( shotItemList[idx]["sgtaskDictWithAssignees"][tasks] ).upper() 
+                if assignedToTxt.upper() in " ".join(shotItemList[idx]["sgtaskDictWithAssignees"][tasks]).upper() :
+                    
+                    availableTaskList.append(tasks)
+                #print assignedToTxt.upper()
+        self.taskFilterWidget.setMyCurrentFromIndexes( top_taskFilterWidget.getTaskCheckedIndexes() ,  availableTaskList  )
 
 
+        self.getVersion(0)
+
+    ## ## @decorateur_try_except
     def eventFilter(self, obj, event):
  
         if obj == self.myNoteBox :
@@ -631,16 +779,15 @@ class noteLayoutWidget(QtGui.QWidget) :
         else :
             return QtGui.QWidget.eventFilter(self, obj, event);
      
- 
-
-
+    ## ## @decorateur_try_except
     def setComboTasks(self, indexList ) :
         
+        self.taskFilterWidget.setMyCurrentFromIndexes
+
         self.taskFilterWidget.setMyCurrentFromIndexes( indexList )
         #self.queue
 
-
-    @decorateur_try_except    
+    ## ## @decorateur_try_except   
     def todo(self, obj) :
         bodyKey = {'content' : obj[0]['content']}
 
@@ -653,6 +800,7 @@ class noteLayoutWidget(QtGui.QWidget) :
         plog("In\n")
         plog(str(taskList) + "\n")
         shot_SgData  = self.shotWidgetItemList[self.shotComboBox.currentIndex()]
+
         versionData = self.my_versionWidgetCombo.getCurrentIndexVersionData()
         typeNote  = self.typeFilterWidget.getfilterList()
         
@@ -672,7 +820,7 @@ class noteLayoutWidget(QtGui.QWidget) :
             linksKey["note_links"].append( {'type': 'Version', 'id' : versionData["id"]  } )
 
         if not taskList :
-            linksKey["note_links"].append( {'type': 'Shot', 'id' : shot_SgData['id']} )            
+            linksKey["note_links"].append( {'type': shot_SgData['type'], 'id' : shot_SgData['id']} )            
 
 
         sujectContent = self.titreLabel.text()
@@ -693,7 +841,7 @@ class noteLayoutWidget(QtGui.QWidget) :
 
         self.SIGNAL_send_NoteContent.emit([noteDict,  obj[0]["uploads"], shot_SgData, taskList ] )
 
-    @decorateur_try_except
+    ## ## @decorateur_try_except
     def updateTaskFilterWidget(self, taskListName ):
         if self.taskFilterWidget : 
             if taskListName :
@@ -702,20 +850,18 @@ class noteLayoutWidget(QtGui.QWidget) :
                 self.taskFilterWidget.widget.blockSignals(False)
             self.getVersion(0)
 
-
-    @decorateur_try_except
+    ## ## @decorateur_try_except
     def replyNoteSlot(self, obj) :
 
         self.SIGNAL_createReply.emit(obj)
                 
-    @decorateur_try_except
+    ## ## @decorateur_try_except
     def multiReplyNoteSlot(self, obj) :
 
         self.SIGNAL_createMultiReply.emit(obj)
 
 
-
-    @decorateur_try_except
+    ## ## @decorateur_try_except
     def getVersion(self, idx):
 
 
@@ -723,17 +869,30 @@ class noteLayoutWidget(QtGui.QWidget) :
         if self.my_versionWidgetCombo :
             self.my_versionWidgetCombo.setOnLoading()
 
+        # flushSgtkQueue
+        while not self.sgtkQueue.empty():
+            try:
+                self.sgtkQueue.get(False)
+            except Empty:
+                continue
+            self.sgtkQueue.task_done()
+        self.sgtkQueue.put([-5, u"getExecutable",   [self.shotWidgetItemList[shotIdx]["id"], self.taskFilterWidget.retrieveDictFromSelection(), str(self.taskFilterWidget.widget.currentText()), self.shotWidgetItemList[shotIdx]["code"], self.shotWidgetItemList[shotIdx]["type"]  ] , None ] ) 
+        
+        self.queue.put([0, u"getVersion",  [ [self.shotWidgetItemList[shotIdx]["id"], self.shotWidgetItemList[shotIdx]["type"] ]  , self.taskFilterWidget.retrieveDictFromSelection(), [self.shotComboBox.currentText(), self.taskFilterWidget.widget.currentText() ] ] , None ] )
 
-        self.queue.put([-5, u"getExecutable",   [self.shotWidgetItemList[shotIdx]["id"], self.taskFilterWidget.retrieveDictFromSelection(), str(self.taskFilterWidget.widget.currentText()), self.shotWidgetItemList[shotIdx]["code"] ] , None ] ) 
-        self.queue.put([0, u"getVersion",  [self.shotWidgetItemList[shotIdx]["id"], self.taskFilterWidget.retrieveDictFromSelection(), [self.shotComboBox.currentText(), self.taskFilterWidget.widget.currentText() ] ] , None ] )
 
+        
+        if self.receiveFocusWidget :
+            if self.getFocus :
+                self.receiveFocusWidget.setFocus()
+    
+    def setTextEditOnFocus(self, idx) :
+        if self.receiveFocusWidget :
+            if self.getFocus :
+                self.receiveFocusWidget.setFocus()
 
-
-
-
-    @decorateur_try_except
+    ## ## @decorateur_try_except
     def fill_versionWidgetCombo(self, obj) :
-
 
         if self.my_versionWidgetCombo :
             if obj[1][0] == self.shotComboBox.currentText() and obj[1][1] == self.taskFilterWidget.widget.currentText() :
