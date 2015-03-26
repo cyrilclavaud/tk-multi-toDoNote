@@ -137,6 +137,48 @@ class sg_query(QtCore.QThread) :
             os.makedirs(self.tempPathAttachement)
 
 
+
+    def get_projectTaskList(self, task_entriesDictList ) :
+        projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
+        print "\nRemoving tasks which doesnt belongs to this project..."
+        tasksList = self.sg.find("Task", [projectFilter], ["content"] ) 
+        taskContentList = []
+        for  task in tasksList :
+            if not task["content"] in taskContentList :
+                taskContentList.append(task["content"])
+        
+
+        allTaskContentHandled = []
+        new_task_entriesDictList = []
+
+        for task_entriesDict in task_entriesDictList :
+            foundValue = False
+            foundValueName = None 
+            if task_entriesDict["text"] == "All" or task_entriesDict["text"] == "NoTask":
+                foundValue = True
+            else :
+                allTaskContentHandled.extend( task_entriesDict["values"] )
+                for value in task_entriesDict["values"] :
+                    if value in taskContentList :
+                        foundValue = True
+                        foundValueName = value
+                
+
+            if foundValue :
+
+                new_task_entriesDictList.append(task_entriesDict)    
+            else : 
+                print "   " + task_entriesDict["text"] + " Removed "
+        
+        for sg_task in taskContentList :
+            if not sg_task in allTaskContentHandled :
+                print " /!\\ this sg_task : " + sg_task + " isnt handled by the toDo-Note configuration"
+
+
+        print "OK\n"
+        return new_task_entriesDictList
+
+
     ## @decorateur_try_except
     def setRunThreadCommand(self, stringCommandSwitch= u"downloadThumbnail", threadCommandArgs = None , threadCommandCallBack= None) :
 
@@ -948,16 +990,16 @@ class sg_query(QtCore.QThread) :
 
 
     def deleteEmptySpawnLink(self, data = None, threadCommandCallBack = None ):
-        print "checking improper spawned link entries "
+        print "checking improper spawned link entries..." 
         projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
         Complex_TaskFilter    ={ "filter_operator": "any",  "filters": [['sg_note','is', None], ['sg_note_links', 'is', None]  ]   }
         spawnLinkList = self.sg.find("CustomEntity04",[projectFilter, Complex_TaskFilter  ] )
         for spawLink in spawnLinkList :
             self.sg.delete("CustomEntity04", spawLink['id'])
-            print "deleting improper spawned link entries "
+            print "deleting improper spawned link entries"
         
         if not spawnLinkList :
-            print "  OK  " 
+            print "OK\n" 
 
 
     ## @decorateur_try_except

@@ -772,7 +772,7 @@ class noteLayoutWidget(QtGui.QWidget) :
  
         if obj == self.myNoteBox :
             if event.type() in [QtCore.QEvent.MouseButtonDblClick, QtCore.QEvent.MouseButtonPress, QtCore.QEvent.MouseButtonRelease ] :
-                print "click"
+ 
                 return True
             else :
                 return False

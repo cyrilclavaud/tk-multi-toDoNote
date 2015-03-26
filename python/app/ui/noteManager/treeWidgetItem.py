@@ -1587,21 +1587,19 @@ class shotAssetWidget(QtGui.QTreeWidgetItem) :
             return False
 
         availableTaskList = self.sgData["sgtaskDictWithAssignees"].keys()
-        """
-        if "NoTask"  in taskFilterList :
-            return False
-        """
+
 
         if not taskFilterList and not taskAssigneesText :
             return False
         else :
             
-
+            #print taskFilterList
             for taskFilter in taskFilterList :
                 
                 if taskFilter == "NoTask" :
                     if len(taskFilterList)>1 :
-                        pass
+                        if not availableTaskList :
+                            return False
                     else :
                         return False
                 
