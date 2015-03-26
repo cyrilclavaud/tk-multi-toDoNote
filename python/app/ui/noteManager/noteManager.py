@@ -436,30 +436,7 @@ class myQueue( Queue.PriorityQueue ) :
 
 
 class Example(QtGui.QWidget):
-    appLauncherDict = { 
-                        "layout" : { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" } },
-                        "Anim"  :  { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" } } ,
-                        "Compo" :  { "tk-multi-launchnuke"  : { "template" : "nuke_shot_work" ,  "icon" : "NukeApp.png" },
-                                     "tk-multi-launchnukeX" : { "template" : "nuke_shot_work" ,  "icon" : "NukeXApp.png" }
-                                   },
-                        "lighting" : { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" } } ,
-                        
-                        "Fur" : { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" },
-                                       "tk-multi-launchhoudini" : {"template" : "houdini_shot_work" ,  "icon" : "HoudiniApp.png" }
-                                    },
 
-                        "modeling" : { "tk-multi-launchmaya" :  { "template" : "maya_asset_work" ,  "icon" : "MayaApp.png" },
-                                       "tk-multi-launchhoudini" : {"template" : "houdini_asset_work" ,  "icon" : "HoudiniApp.png" }
-                                    },
-
-                        "rigging" : { "tk-multi-launchmaya" :  { "template" : "maya_asset_work" ,  "icon" : "MayaApp.png" },
-                                       "tk-multi-launchhoudini" : {"template" : "houdini_asset_work" ,  "icon" : "HoudiniApp.png" }
-                                    },
-                        "Surface" : { "tk-multi-launchmaya" :  { "template" : "maya_asset_work" ,  "icon" : "MayaApp.png" },
-                                       "tk-multi-launchhoudini" : {"template" : "houdini_asset_work" ,  "icon" : "HoudiniApp.png" }
-                                    }
-                       }
-                      
 
 
     def __del__(self):
@@ -470,43 +447,18 @@ class Example(QtGui.QWidget):
     def __initStyle(self):
         return
 
-        # QtGui.QApplication.setStyle("plastique")
-
-        # palette_file = getStyle("dark_palette.qpalette")
-        # fh = QtCore.QFile(palette_file)
-        # fh.open(QtCore.QIODevice.ReadOnly);
-        # file_in = QtCore.QDataStream(fh)
-
-        # # deserialize the palette
-        # # (store it for GC purposes)
-        # _dark_palette = QtGui.QPalette()
-        # file_in.__rshift__(_dark_palette)
-        # fh.close()
-
-        # # set the std selection bg color to be 'shotgun blue'
-        # _dark_palette.setBrush(QtGui.QPalette.Highlight, QtGui.QBrush(QtGui.QColor("#30A7E3")))
-        # _dark_palette.setBrush(QtGui.QPalette.HighlightedText, QtGui.QBrush(QtGui.QColor("#FFFFFF")))
-
-        # # and associate it with the qapplication
-        # QtGui.QApplication.setPalette(_dark_palette)
-           
-
     ## @decorateur_try_except 
     def __init__(self ):
         self.__initStyle()
-        import traceback 
 
         perr("",True)
         plog("",True)
         pprint("",True)
 
-
-        QtGui.QWidget.__init__(self)
-        
+        QtGui.QWidget.__init__(self)     
 
         self.queue = None
         self.sgtkQueue = None
-
         self.SGTK_ENGINE = None
         self.engineName = None
         self._app = None
@@ -530,21 +482,19 @@ class Example(QtGui.QWidget):
 
         projectId =  191 
         userDict = None
-
         self.InitOnShotName = {"id":0}
         self.InitFilterOnTaskName = None
         
-
        
         try :
             self._app = sgtk.platform.current_bundle()
 
             projectDict = self._app.context.project
-            pprint("Project :" + str( projectDict ) + "\n")
+            print "Project :" + str( projectDict ) 
             projectId = projectDict["id"]
             
             userDict = self._app.context.user
-            pprint("User :" + str( userDict ) + "\n")
+            print "User :" + str( userDict ) 
 
 
             if self._app.context.task :
@@ -553,31 +503,62 @@ class Example(QtGui.QWidget):
                 self.InitFilterOnTaskName = self._app.context.step["name"]
 
             entityDict = self._app.context.entity
-            pprint("Entity : " +  str( entityDict ) + "\n")
+            print "Entity : " +  str( entityDict ) 
             
             if entityDict :
                 if entityDict["type"] == "Shot" :
 
                     self.InitOnShotName= entityDict
-                    pprint("init not manager on shot "+ str(self.InitOnShotName) + "\n")
+                    print "Init not manager on shot "+ str(self.InitOnShotName) 
                 elif entityDict["type"] == "Asset" :
 
                     self.InitOnShotName= entityDict
-                    pprint("init not manager on asset "+ str(self.InitOnShotName) + "\n")
+                    print "Init not manager on asset "+ str(self.InitOnShotName) 
 
         except :
-            pprint(str( "cant get context entity") + "\n")
+            print "Cant get context entity"
 
-       
+
+
+
+
+        self.appLauncherDict = { 
+                        "layout" : { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" } },
+                        "Anim"  :  { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" } } ,
+                        "Compo" :  { "tk-multi-launchnuke"  : { "template" : "nuke_shot_work" ,  "icon" : "NukeApp.png" },
+                                     "tk-multi-launchnukeX" : { "template" : "nuke_shot_work" ,  "icon" : "NukeXApp.png" }
+                                   },
+                        "lighting" : { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" } } ,
+                        
+                        "Fur" : { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" },
+                                       "tk-multi-launchhoudini" : {"template" : "houdini_shot_work" ,  "icon" : "HoudiniApp.png" }
+                                    },
+                        "Fx" : { "tk-multi-launchmaya" :  { "template" : "maya_shot_work" ,  "icon" : "MayaApp.png" },
+                                       "tk-multi-launchhoudini" : {"template" : "houdini_shot_work" ,  "icon" : "HoudiniApp.png" }
+                                    },
+                        "modeling" : { "tk-multi-launchmaya" :  { "template" : "maya_asset_work" ,  "icon" : "MayaApp.png" },
+                                       "tk-multi-launchhoudini" : {"template" : "houdini_asset_work" ,  "icon" : "HoudiniApp.png" }
+                                    },
+
+                        "rigging" : { "tk-multi-launchmaya" :  { "template" : "maya_asset_work" ,  "icon" : "MayaApp.png" },
+                                       "tk-multi-launchhoudini" : {"template" : "houdini_asset_work" ,  "icon" : "HoudiniApp.png" }
+                                    },
+                        "Surface" : { "tk-multi-launchmaya" :  { "template" : "maya_asset_work" ,  "icon" : "MayaApp.png" },
+                                       "tk-multi-launchhoudini" : {"template" : "houdini_asset_work" ,  "icon" : "HoudiniApp.png" }
+                                    }
+                       }
+                      
+
         ############# TASK
         task_entriesDictList = [ {"text" : "All", "icon" : None, "values": []  },
                             {"text" : "Compo", "icon" : "task_compo.png", "values": ["Compositing", "Comp", "Compo"] },
                             {"text" : "lighting", "icon" : "task_lit.png" , "values": ["Lighting", "lighting"]  },
                             {"text" : "Anim", "icon" : "task_animation.png", "values": ["Animation","animation","anim", "Anim"]  },
                             {"text" : "layout", "icon" : "task_layout.png" , "values": ["Layout", "layout"] },
-                            {"text" : "Fur", "icon" : "task_fur.png" , "values": ["fur","Fur"] },                
+                            {"text" : "Fur", "icon" : "task_fur.png" , "values": ["fur","Fur"] },
+                            {"text" : "Fx",  "icon" : "task_fx.png" , "values": [ "fx", "FX", "Fx", "fX" ] },
                             {"text" : "Surface", "icon" : "task_surfacing.png" , "values": ["Surface"] },             
-                            {"text" : "modeling", "icon" : "task_modelisation.png" , "values": ["Modeling", "Model" ,"modeling"] },
+                            {"text" : "modeling", "icon" : "task_modelisation.png" , "values": ["Modeling", "Model" ,"modeling", "retopo"] },
                             {"text" : "rigging", "icon" : "task_rig.png" , "values": ["Rig", "rig", "rigging"] },
                             {"text" : "Art", "icon" : "task_art.png" , "values": ["Art","art"] },  
                             {"text" : "NoTask", "icon" : "task.png" , "values": ["NoTask"] }
@@ -612,33 +593,13 @@ class Example(QtGui.QWidget):
             status_mask = maskList[2]
 
 
-        if self.InitFilterOnTaskName  :
-            task_entriesDictList = self.setCheckedFromValue(task_entriesDictList, [self.InitFilterOnTaskName] + ["NoTask"] )
-        elif task_mask :
-            task_entriesDictList = self.setCheckedFromCheckedList(task_entriesDictList, task_mask )   
-        else :
-            task_entriesDictList = self.setCheckedFromValue(task_entriesDictList, [None] )
-
-        self.taskFilterWidget =  comboFilterWidget2( {"name":"Task" , "icon": "task.png"}, task_entriesDictList, multiCheckable = True )
-
-
-        if type_mask :
+        if type_mask and len(type_mask) == len(type_entriesDictList) :
             type_entriesDictList = self.setCheckedFromCheckedList(type_entriesDictList, type_mask )   
         else :
             type_entriesDictList = self.setCheckedFromValue(type_entriesDictList, ["To Do", "NoType"] )
-
         self.typeFilterWidget = comboFilterWidget2( {"name":"Type" , "icon": "type.png"}, type_entriesDictList, multiCheckable = True ) 
 
-
-        if status_mask :
-            status_entriesDictList = self.setCheckedFromCheckedList(status_entriesDictList, status_mask )   
-        else :
-            status_entriesDictList = self.setCheckedFromValue(status_entriesDictList, ["Open", "ip"] )
-        
-        self.statusFilterWidget = comboFilterWidget2( {"name":"Status" , "icon": "status.png"}, status_entriesDictList, multiCheckable = True  )
-
-
-        print "creating threads" ,
+        print "creating threads" 
         for i in range(9) :
 
             sg = sg_query( self._app  )            
@@ -650,7 +611,8 @@ class Example(QtGui.QWidget):
                 sg.setTempPath()
                 sg.setAppLauncher(self.appLauncherDict)
                 sg.setTypeFilterWidget(self.typeFilterWidget)
-            
+                task_entriesDictList = sg.get_projectTaskList( task_entriesDictList )
+
             elif i == 2 and self.engineName in ["tk-shotgun", "tk-desktop", "tk-shell"] :
                 self.sg = sg
                 sg.setProjectId(projectId, useSGTK = True )
@@ -664,7 +626,7 @@ class Example(QtGui.QWidget):
                 sg.SIGNAL_updateLaunchAppWidget.connect(self.updateLauncherWidget)
 
                 sg.start()
-                pprint("thread Sgtk init " +str(sg.th_id ) +"\n" )
+                
             else :
                 self.sg = sg
                 sg.setProjectId(projectId, useSGTK = False )
@@ -696,10 +658,29 @@ class Example(QtGui.QWidget):
                 sg.SIGNAL_pbar.connect(self.updateProgressBar)
 
                 sg.start()
-                pprint("thread init " +str(sg.th_id ) +"\n" )                
+    
 
         print "\ncreating threads done\n" 
 
+
+        if self.InitFilterOnTaskName  :
+            task_entriesDictList = self.setCheckedFromValue(task_entriesDictList, [self.InitFilterOnTaskName] + ["NoTask"] )
+        elif task_mask and len(task_mask) == len(task_entriesDictList) :
+            task_entriesDictList = self.setCheckedFromCheckedList(task_entriesDictList, task_mask )   
+        else :
+            task_entriesDictList = self.setCheckedFromValue(task_entriesDictList, [None] )
+
+        self.taskFilterWidget =  comboFilterWidget2( {"name":"Task" , "icon": "task.png"}, task_entriesDictList, multiCheckable = True )
+
+
+
+
+        if status_mask :
+            status_entriesDictList = self.setCheckedFromCheckedList(status_entriesDictList, status_mask )   
+        else :
+            status_entriesDictList = self.setCheckedFromValue(status_entriesDictList, ["Open", "ip"] )
+        
+        self.statusFilterWidget = comboFilterWidget2( {"name":"Status" , "icon": "status.png"}, status_entriesDictList, multiCheckable = True  )
 
 
 
@@ -795,7 +776,7 @@ class Example(QtGui.QWidget):
         self.filteringLayout = QtGui.QHBoxLayout()
         self.filteringLayout.setContentsMargins(0,0,0,0)
         self.refreshUI_Btn =  toggleBtn("")
-        self.refreshUI_Btn.setToolTip("Flush pending operations and refresh notes")
+        self.refreshUI_Btn.setToolTip("- Flush pending operations\n- Refresh current notes if any shot&Asset is selected\nor refresh the shot&asset list otherwise")
 
 
         
@@ -931,10 +912,7 @@ class Example(QtGui.QWidget):
 
         self.splitter = QtGui.QSplitter()
         self.splitter.setObjectName("hori")
-
-        style = "QSplitter::handle:vertical#verti {background: qlineargradient(x1:0, y1:1, x2:0, y2:1, stop:0 rgba(120, 120, 150, 40% ), stop:1 rgba(120, 120, 150, 40% ) );border: 1px solid rgba(120, 120, 150, 40% ); width : 1px ; height : 1px ;margin-right: 2px;margin-left: 2px;border-radius: 4px;}\n"
-        style += "QSplitter::handle:horizontal#hori {background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 rgba(120, 120, 150, 40% ), stop:1 rgba(120, 120, 150, 40% ));border: 1px solid rgba(120, 120, 150, 40% ) ;width: 13px;margin-top: 2px;margin-bottom: 2px;border-radius: 4px;}"
-        
+  
 
         style = "QSplitter::handle:vertical#verti {  background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(255, 120, 150, 0% ),stop:0.5 rgba(140, 140, 140, 100% ), stop:1 rgba(120, 120, 150, 0% ) );border: 1px solid rgba(120, 120, 150, 0% ) ; width : 1px ; height : 1px ;margin-right: 2px;margin-left: 2px;border-radius: 4px;}\n"
         style += "QSplitter::handle:horizontal#hori {background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(255, 120, 150, 0% ),stop:0.5 rgba(140, 140, 140, 100% ), stop:1 rgba(120, 120, 150, 0% ) );border: 1px solid rgba(120, 120, 150, 0% ) ;width: 13px;margin-top: 2px;margin-bottom: 2px;border-radius: 4px;}"
@@ -993,7 +971,7 @@ class Example(QtGui.QWidget):
 
 
 
-        self.splitter.splitterMoved.connect(self.resizeFilterLayout  )
+        #self.splitter.splitterMoved.connect(self.resizeFilterLayout  )
 
         self.myTree.itemSelectionChanged.connect(self.shotTreeClicked )
         self.refreshUI_Btn.clicked.connect(   self.flush  ) 
@@ -1108,17 +1086,7 @@ class Example(QtGui.QWidget):
     #########
     #########
     #############################################
-  
-    #OBSO
-    ## @decorateur_try_except 
-    """
-    def fill_TaskAssigned(self, idx) :
-        soloCheckedTask = self.taskFilterWidget.getSoloChecked() 
-        if soloCheckedTask :
-            for shotAssetItem in self.myTree.findItems("shotAsset_", QtCore.Qt.MatchStartsWith  | QtCore.Qt.MatchRecursive,  10) : 
-                
-                self.queue.put( [ 0 , u"queryTaskAssigned" ,  [shotAssetItem.sgData, soloCheckedTask] , None ] )
-    """
+
 
     ## @decorateur_try_except
     def breakNoteLink(self, itemList ) :
@@ -1310,6 +1278,14 @@ class Example(QtGui.QWidget):
                 continue
             self.queue.task_done()
 
+
+        if not self.myTree.selectedItems() :
+            self.myTree.clear()
+            self.myTree2.clear()
+            self.queue.put( [ 3,u"deleteEmptySpawnLink"  , None , None ]  )
+            self.queue.put( [ 3,u"fillSeqShotTree"  , None , None ] )
+
+
         self.shotTreeClicked(True) 
 
 
@@ -1346,7 +1322,7 @@ class Example(QtGui.QWidget):
             temp_shotTreeSelection_id_List = []
             for itemW in self.myTree.selectedItems() :
                 temp_shotTreeSelection_id_List.append( itemW.text(10) )
-                if itemW.text(10) not in self.shotTreeSelection_id_List:
+                if not itemW.isHidden() and itemW.text(10) not in self.shotTreeSelection_id_List:
                     newItems.append(itemW)
 
             for prevSelId in self.shotTreeSelection_id_List :
@@ -1873,10 +1849,10 @@ class Example(QtGui.QWidget):
             else :
                 self.queue.put( [ 30 , u"getAvailableTasks"  , [shot_sgData, shotItem] , self.updateTree1_withFilter  ] )
                 
+            self.updateTree1_withFilter()
 
 
-
-        self.updateTree1_withFilter()
+        
 
         self.queue.put( [ 150 , u"downloadThumbnail"  , shotDictList , self.findInTree ] )
 
@@ -1917,7 +1893,7 @@ class Example(QtGui.QWidget):
             else :
                 self.queue.put( [ 30 , u"getAvailableTasks"  , [shot_sgData, shotItem] , self.updateTree1_withFilter ] )
 
-        self.updateTree1_withFilter()
+            self.updateTree1_withFilter()
 
         self.queue.put( [ 150 , u"downloadThumbnail"  , shotDictList , self.findInTree ] )
 
