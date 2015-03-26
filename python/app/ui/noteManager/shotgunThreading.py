@@ -699,29 +699,52 @@ class sg_query(QtCore.QThread) :
         taskValuesList = data[1]
         noteId = data[2]
         shotType = data[3]
+        shotCode = data[4]
+        statusState = data[5]
 
 
         shotFilter    = ['entity','is', {'type': shotType, 'id':shotId } ]
-        taskFilter = []
-        for taskName in taskValuesList:
-            if "NoTask" in taskName :
-                taskFilter.append( ['sg_task', 'is', None  ] )
-            else :
-                taskFilter.append( ['sg_task', 'name_contains', taskName  ] )
+        lastVersionDictList = []
+        if taskValuesList :
+            taskFilter = []
+            for taskName in taskValuesList:
+                if "NoTask" in taskName :
+                    taskFilter.append( ['sg_task', 'is', None  ] )
+                else :
+                    taskFilter.append( ['sg_task', 'name_contains', taskName  ] )
 
-        Complex_TaskFilter    ={
-            "filter_operator": "any",
-            "filters": taskFilter
-            }
+            Complex_TaskFilter    ={
+                "filter_operator": "any",
+                "filters": taskFilter
+                }
 
-        orderList = [{'field_name':'id','direction':'desc'}]
-        lastVersionDictList = self.sg.find("Version", [projectFilter, shotFilter, Complex_TaskFilter ], fields = ["sg_task","user", "created_at", "image", "sg_path_to_movie", "code"] , limit = 1, order = orderList  )
+            orderList = [{'field_name':'id','direction':'desc'}]
+            lastVersionDictList = self.sg.find("Version", [projectFilter, shotFilter, Complex_TaskFilter ], fields = ["sg_task","user", "created_at", "image", "sg_path_to_movie", "code"] , limit = 1, order = orderList  )
+        
         if lastVersionDictList :
+
             versionDict = lastVersionDictList[-1]
             shotDict = self.sg.find_one("Shot", [projectFilter, ["id",'is', shotId] ] )
-            self.sg.update("Note", noteId, {"note_links" : [versionDict, shotDict ] })
-            self.SIGNAL_refreshNote.emit( [ {"id" : noteId} , False ] )
+            updateDataDict =  {"note_links" : [versionDict, shotDict ] }
+            if statusState :
+                updateDataDict['sg_status_list'] = statusState  
+         
+            self.sg.update("Note", noteId,  updateDataDict )
+            
+            sgDataShot = {"id" : shotId , "code" : shotCode , "getOnly_Notes" : [ noteId ], "type":data[3] } 
+            self.queue.put( [1, u"queryNotes"  , sgDataShot, None ] )
 
+        else :
+   
+            if statusState :
+
+                updateDataDict = { 'sg_status_list': statusState } 
+
+                self.sg.update("Note", noteId,  updateDataDict )
+                sgDataShot = {"id" : shotId , "code" : shotCode , "getOnly_Notes" : [ noteId ], "type":data[3] } 
+                self.queue.put( [1, u"queryNotes"  , sgDataShot, None ] )
+
+                #self.SIGNAL_refreshNote.emit( [ {"id" : noteId} , False ] )
     ## @decorateur_try_except
     def replyNote(self, replyNoteData, threadCommandCallBack ) :
 

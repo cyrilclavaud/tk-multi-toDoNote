@@ -1168,13 +1168,10 @@ class Example(QtGui.QWidget):
             noteId = 0
             if item.sgData.has_key('id') :
 
+                taskValuesList = []
                 if item.sgData["tasks"] :
                     taskValuesList = self.taskFilterWidget.retrieveValueFromName(item.sgData["tasks"][0]["name"])
-                    if taskValuesList :
-                        self.queue.put( [ 0 , u"linkToLastVersion" , [  item.sgData['shotId'],  taskValuesList , item.sgData['id'], item.sgData['shotType'] ] , None ] )
-                if selectedNoteList[1] :
-                    noteState = {"new_sg_status_list":selectedNoteList[1], "id" : item.sgData['id']}
-                    self.queue.put( [ 0 , u"setNoteStatus" , [noteState,  item.sgData] , None ] )
+                self.queue.put( [ 0 , u"linkToLastVersion" , [  item.sgData['shotId'],  taskValuesList , item.sgData['id'], item.sgData['shotType'], item.sgData['shotCode'] , selectedNoteList[1]  ] , None ] )           
 
     ## @decorateur_try_except
     def setNoteLink(self, itemListAndTaskValues_list) :
