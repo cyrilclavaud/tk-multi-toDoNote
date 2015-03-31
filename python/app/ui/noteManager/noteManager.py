@@ -947,7 +947,8 @@ class Example(QtGui.QWidget):
         col2 = int(splitSize/5)
         if self.InitOnShotName["id"] :
             col1 = 0.0
-
+        else :
+            col1= 280.0
         self.splitter.setSizes([ col1,col2, splitSize-(col1+col2)])
 
 

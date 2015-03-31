@@ -49,8 +49,9 @@ class StgkStarterApp(tank.platform.Application):
             if self.settings.has_key('launch_at_startup') :
                 launchAtStartup = self.get_setting('launch_at_startup')  
                 if launchAtStartup  and not  self.engine.name in ["tk-shotgun", "tk-desktop", "tk-shell"] :
-                    print "Launch toDo note at start up"               
-                    app_payload.dialog.show_dialog(self)
+                    if self.engine.has_ui: 
+                        print "Launch toDo note at start up"               
+                        app_payload.dialog.show_dialog(self)
 
 
 
