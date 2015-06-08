@@ -34,11 +34,14 @@ class launchBtn(QtGui.QPushButton) :
         self.SGTK_ENGINE = SGTK_ENGINE
         self.launchApp = launchApp
         self.version = version
+        self.sgTaskDict = parent.sgTaskDict
 
         
         if not SGTK_ENGINE.apps.has_key( launchApp ) :
             self.setEnabled(False)
-
+            self.setToolTip( launchApp + " hasn't been (properly) declared\nSee configuration files.")
+        else :
+            self.setToolTip(launchApp + "\nRight click to specifically open a file." )
 
         self.values = values
         
@@ -114,7 +117,7 @@ class launchBtn(QtGui.QPushButton) :
         
 
         tk_i = sgtk.tank_from_entity( "Task" , entityId)
-        context = tk_i.context_from_entity("Task" ,entityId )
+        context = tk_i.context_from_entity("Task" , self.sgTaskDict['id'] )
         print self.launchApp , "launch -> empty ", context
         appLauncher._launch_app(context, version= self.version )
     
@@ -127,8 +130,10 @@ class launchBtn(QtGui.QPushButton) :
  
         
         tk_i = sgtk.tank_from_path( path)
-        context = tk_i.context_from_path(path)
+        context = tk_i.context_from_entity("Task" , self.sgTaskDict['id'] )
+
         print self.launchApp, "launch ->", context , path 
+
         #app._launch_app(context, version= self.version )
         app._launch_app(   context, file_to_open= path, version=self.version) 
 
@@ -152,7 +157,7 @@ class LaunchApp_widget( QtGui.QWidget ):
 
 
     ## @decorateur_try_except
-    def __init__(self, new_appLauncherDict, shotId, taskName, entityCode,  empty = False, SGTK_ENGINE = None, parent = None  ) :
+    def __init__(self, new_appLauncherDict, shotId, taskName, entityCode, sgTaskDict,  empty = False, SGTK_ENGINE = None, parent = None  ) :
 
 
 
@@ -166,6 +171,7 @@ class LaunchApp_widget( QtGui.QWidget ):
         self.eng = None
         self.shotId = shotId
         self.taskName = taskName
+        self.sgTaskDict = sgTaskDict
         self.empty = empty
 
         layout = QtGui.QHBoxLayout()

@@ -964,7 +964,7 @@ class Example(QtGui.QWidget):
 
 
 
-        self.updateLauncherWidget( [{"clear":True}, 0 , "", "" ]) 
+        self.updateLauncherWidget( [{"clear":True}, 0 , "", "", [] ]) 
 
 
 
@@ -1314,7 +1314,7 @@ class Example(QtGui.QWidget):
         QtGui.QApplication.processEvents()
 
         if not self.myTree.selectedItems() :
-            self.updateLauncherWidget( [{"clear":True}, 0 , "", "" ]) 
+            self.updateLauncherWidget( [{"clear":True}, 0 , "", "" ,[] ]) 
 
 
         if not forceRedraw :
@@ -1633,7 +1633,7 @@ class Example(QtGui.QWidget):
             if obj[1] == 0 :
                 bar.setParent(None)
                 bar.deleteLater()            
-                self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True,  SGTK_ENGINE=self.SGTK_ENGINE ,parent = self ) )
+                self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4]   ,empty = True,  SGTK_ENGINE=self.SGTK_ENGINE ,parent = self ) )
                 QtGui.QApplication.processEvents()
                 return 
             
@@ -1646,7 +1646,7 @@ class Example(QtGui.QWidget):
 
                         bar.setParent(None)
                         bar.deleteLater()
-                        self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3] , SGTK_ENGINE=self.SGTK_ENGINE, parent = self)  )
+                        self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4]   , SGTK_ENGINE=self.SGTK_ENGINE, parent = self)  )
                         QtGui.QApplication.processEvents()
                     #QtGui.QApplication.processEvents()
                     return
@@ -1655,17 +1655,17 @@ class Example(QtGui.QWidget):
                 if obj[0].has_key("clear") :
                     bar.setParent(None)
                     bar.deleteLater()
-                    self.mainLayout.addWidget(  LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True , SGTK_ENGINE=self.SGTK_ENGINE,  parent = self )  )
+                    self.mainLayout.addWidget(  LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4]   , empty = True , SGTK_ENGINE=self.SGTK_ENGINE,  parent = self )  )
                     QtGui.QApplication.processEvents()
                 else :
                     return
                     
         else :
-            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], empty = True ,  SGTK_ENGINE=self.SGTK_ENGINE , parent = self )   )
+            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4]   , empty = True ,  SGTK_ENGINE=self.SGTK_ENGINE , parent = self )   )
 
 
         if not obj[0].has_key("clear") :
-            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3],  SGTK_ENGINE=self.SGTK_ENGINE, parent = self )  )
+            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4]   ,  SGTK_ENGINE=self.SGTK_ENGINE, parent = self )  )
 
 
 

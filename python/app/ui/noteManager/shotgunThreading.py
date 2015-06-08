@@ -886,7 +886,7 @@ class sg_query(QtCore.QThread) :
 
 
 
-        self.SIGNAL_updateLaunchAppWidget.emit( [{"clear" : True}, shotObjAndTaskValues_List[0], shotObjAndTaskValues_List[2], shotObjAndTaskValues_List[3]] ) 
+        self.SIGNAL_updateLaunchAppWidget.emit( [{"clear" : True}, shotObjAndTaskValues_List[0], shotObjAndTaskValues_List[2], shotObjAndTaskValues_List[3], []] ) 
 
         projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
         shotFilter    = ['entity','is', {'type': shotObjAndTaskValues_List[4], 'id': shotObjAndTaskValues_List[0]} ]
@@ -941,7 +941,7 @@ class sg_query(QtCore.QThread) :
                 new_appLauncherDict[shotObjAndTaskValues_List[2]][launcherApp]["files"] = [ sorted(work_file_paths_list)[-5:][::-1], fileNameDictList,  taskDict['id'] ] 
 
             
-        self.SIGNAL_updateLaunchAppWidget.emit( [new_appLauncherDict,shotObjAndTaskValues_List[0], shotObjAndTaskValues_List[2], shotObjAndTaskValues_List[3] ] ) 
+        self.SIGNAL_updateLaunchAppWidget.emit( [new_appLauncherDict,shotObjAndTaskValues_List[0], shotObjAndTaskValues_List[2], shotObjAndTaskValues_List[3], taskDict ] ) 
 
     ## @decorateur_try_except
     def createNote(self, noteDictList, threadCommandCallBack = None) :
