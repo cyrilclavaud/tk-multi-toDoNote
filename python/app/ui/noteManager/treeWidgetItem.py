@@ -1651,6 +1651,12 @@ class shotAssetWidget(QtGui.QTreeWidgetItem) :
         return matchItem
 
 
+    def __lt__(self, otherItem):
+
+
+        orig  =  str(self.sgData["code"])
+        other = str(otherItem.sgData["code"]) 
+        return orig > other
 
 
 

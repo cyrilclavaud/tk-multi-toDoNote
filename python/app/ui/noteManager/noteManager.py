@@ -692,7 +692,6 @@ class Example(QtGui.QWidget):
      
         self.queue.put( [ 3,u"deleteEmptySpawnLink"  , None , None ]  )
         self.queue.put( [ 3,u"fillSeqShotTree"  , None , None ] )
-        #
 
         self.shotTreeSelection_id_List = []
 
