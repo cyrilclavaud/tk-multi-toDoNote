@@ -118,7 +118,12 @@ class launchBtn(QtGui.QPushButton) :
 
         tk_i = sgtk.tank_from_entity( "Task" , entityId)
         context = tk_i.context_from_entity("Task" , self.sgTaskDict['id'] )
+
         print self.launchApp , "launch -> empty ", context
+        try :
+            print "TASK " , context.task
+        except :
+            pass
         appLauncher._launch_app(context, version= self.version )
     
     ## @decorateur_try_except
@@ -131,7 +136,15 @@ class launchBtn(QtGui.QPushButton) :
         
         tk_i = sgtk.tank_from_path( path)
         context = tk_i.context_from_entity("Task" , self.sgTaskDict['id'] )
-
+        try :
+            
+            print "TASK " , context.task
+            print "STEP " , context.step
+            print "PROJ " , context.project
+            print "TYPE " , context.entity
+            print "USER " , context.user
+        except :
+            pass
         print self.launchApp, "launch ->", context , path 
 
         #app._launch_app(context, version= self.version )

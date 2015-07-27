@@ -111,16 +111,41 @@ class sg_query(QtCore.QThread) :
     def setAppLauncher(self, appLauncherDict ) :
         self.appLauncherDict = appLauncherDict
 
+
+    def coreVersionCheck(self, currVersion, refVersion):
+        '''
+        Compare core api versions
+        Returns true if currVersion is newer or identical to reference version
+        '''
+
+        currVersion = currVersion.split('v')[1]
+        refVersion = refVersion.split('v')[1]
+
+        currVersionTuple =  tuple(map(int, (currVersion.split("."))))
+        refVersionTuple =  tuple(map(int, (refVersion.split("."))))
+
+        if currVersionTuple > refVersionTuple: 
+            return True
+        else: 
+            return False
+
     def setProjectId(self, projectId = 191 , useSGTK = True) :
+        import traceback
         self.project = projectId
         
         sgTank = None
         if useSGTK :
             try :
                 import sgtk
+                print "\nTank instantiation."
                 sgTank= sgtk.sgtk_from_entity(  "Project", projectId)
-                print "Tank Ok"
+                
+                if self.coreVersionCheck(sgTank.version, 'v0.15') :
+                    print "local synchronization of the path cache dataBase."
+                    sgTank.synchronize_filesystem_structure()
+                print "Ok"
             except :
+                print(traceback.format_exc())
                 pass
         self.tk =  sgTank
 
@@ -140,7 +165,7 @@ class sg_query(QtCore.QThread) :
 
     def get_projectTaskList(self, task_entriesDictList ) :
         projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
-        print "\nRemoving tasks which doesnt belongs to this project..."
+        print "\nIgnore tasks which doesnt belongs to this project..."
         tasksList = self.sg.find("Task", [projectFilter], ["content"] ) 
         taskContentList = []
         for  task in tasksList :
