@@ -1253,6 +1253,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
                 return True
 
     def checkFilterAssigned(self) :
+
         filterText = self.entityAssignedFilterWidget.getText()
         text = self.text(8)
         if not isinstance(text, unicode):
@@ -1290,7 +1291,8 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         status  = self.checkFilterStatus()
         user    = self.checkFilterUser() 
         content = self.checkFilterContent()
-        assignedTo = self.checkFilterAssigned()
+        assignedTo = False #self.checkFilterAssigned()
+
         task = self.checkFilterTasks()
         shot = self.checkFilterShotAsset()
 
