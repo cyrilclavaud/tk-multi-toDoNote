@@ -269,7 +269,10 @@ class myQTree( QtGui.QTreeWidget ):
     def close_editItem(self, item,  column) :
         
         if self.lastItem_edited :
-            if not item.sgData.has_key('id') :
+            if item.sgData == None :
+                self.lastItem_edited.setEditableMode(False)
+                self.lastItem_edited = None
+            elif not item.sgData.has_key('id') :
                 self.lastItem_edited.setEditableMode(False)
                 self.lastItem_edited = None
             elif not self.lastItem_edited.sgData["id"] == item.sgData['id'] :
@@ -559,7 +562,7 @@ class Example(QtGui.QWidget):
                             {"text" : "Fx",  "icon" : "task_fx.png" , "values": [ "fx", "FX", "Fx", "fX" ] },
                             {"text" : "Surface", "icon" : "task_surfacing.png" , "values": ["Surface"] },             
                             {"text" : "modeling", "icon" : "task_modelisation.png" , "values": ["Modeling", "Model" ,"modeling", "retopo"] },
-                            {"text" : "rigging", "icon" : "task_rig.png" , "values": ["Rig", "rig", "rigging"] },
+                            {"text" : "rigging", "icon" : "task_rig.png" , "values": ["Rig", "rig", "rigging", "Rigging"] },
                             {"text" : "Art", "icon" : "task_art.png" , "values": ["Art","art"] },  
                             {"text" : "NoTask", "icon" : "task.png" , "values": ["NoTask"] }
                           ]
@@ -981,7 +984,7 @@ class Example(QtGui.QWidget):
         self.statusFilterWidget.widget.currentIndexChanged.connect( self.updateTree2_withFilter )
         self.userNameFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
         self.contentFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
-        self.entityAssignedFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
+        #self.entityAssignedFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
         self.shotAssetFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
 
         self.shotAssetFilterWidget.widget.textChanged.connect(self.updateTree1_withFilter)
@@ -1024,9 +1027,10 @@ class Example(QtGui.QWidget):
         self.filteringLayout.invalidate()
 
         self.myTree2.columHasMoved(0,0,0, False)
-
-
         header.setResizeMode(0, QtGui.QHeaderView.Interactive)
+        
+        if self.getHeaderHiddenColumnNumber(9) == 9 :
+            self.toggleColumnDisplay(0, 0)
 
         self.show()
 
@@ -1505,15 +1509,33 @@ class Example(QtGui.QWidget):
         self.drawNote()
 
 
-    ## @decorateur_try_except 
-    def toggleColumnDisplay(self, test ,index ) :
+    def getHeaderHiddenColumnNumber(self, columnNumber) :
+        count = 0
         header = self.myTree2.header() 
+        for i in range(9):
+            if header.isSectionHidden(header.logicalIndex(header.visualIndex(i)) )  :
+                count+=1
+
+        return count
 
 
+
+    def toggleColumnDisplay(self, test ,index ) :
+        
+        # define const
+        columnNumber = 9
+
+
+        header = self.myTree2.header() 
         if header.isSectionHidden(header.logicalIndex(header.visualIndex(index)) )  :
             header.showSection(header.logicalIndex(header.visualIndex(index))) 
         else :
             header.hideSection(header.logicalIndex(header.visualIndex(index))) 
+
+        if self.getHeaderHiddenColumnNumber(columnNumber) == columnNumber :
+            self.toggleColumnDisplay(test, index)
+
+
 
         self.myTree2.columHasMoved(0,0,0, save=True)
 
@@ -1528,48 +1550,48 @@ class Example(QtGui.QWidget):
         menu = QtGui.QMenu()
         
         header = self.myTree2.header() 
-        fct = lambda test, index = 0 : self.toggleColumnDisplay(test, index)
+        fct = lambda test = 0 , index = 0 : self.toggleColumnDisplay(test, index)
         act =  QtGui.QAction("Content", menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(0)) ) )
         act.triggered.connect(fct)
         menu.addAction( act )
 
 
-        fct = lambda test, index = 1 : self.toggleColumnDisplay(index, index)
+        fct = lambda test = 0, index = 1 : self.toggleColumnDisplay(index, index)
         act =  QtGui.QAction("Tasks"  , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(1)) ) )
         act.triggered.connect(fct)
         menu.addAction( act )
 
-        fct = lambda test, index = 2 : self.toggleColumnDisplay(index, index)
+        fct = lambda test = 0, index = 2 : self.toggleColumnDisplay(index, index)
         act =  QtGui.QAction("Type"  , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(2)) ) )
         act.triggered.connect(fct)
         menu.addAction( act )
 
-        fct = lambda test, index = 9 : self.toggleColumnDisplay(index, index)
+        fct = lambda test = 0, index = 9 : self.toggleColumnDisplay(index, index)
         act =  QtGui.QAction("Created_at" , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(9)) ) )
         act.triggered.connect(fct)
         menu.addAction( act )
 
-        fct = lambda test, index = 4 : self.toggleColumnDisplay(index, index)
-        act =  QtGui.QAction("user"  , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(4)) ) )
+        fct = lambda test = 0, index = 4 : self.toggleColumnDisplay(index, index)
+        act =  QtGui.QAction("Writer"  , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(4)) ) )
         act.triggered.connect(fct)
         menu.addAction( act )
 
-        fct = lambda test, index = 5 : self.toggleColumnDisplay(index, index)
+        fct = lambda test = 0, index = 5 : self.toggleColumnDisplay(index, index)
         act =  QtGui.QAction("Version Number (v---)"  , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(5)) ) )
         act.triggered.connect(fct)
         menu.addAction( act )
 
-        fct = lambda test, index = 6 : self.toggleColumnDisplay(index, index)
+        fct = lambda test = 0, index = 6 : self.toggleColumnDisplay(index, index)
         act =  QtGui.QAction("Shot/Asset" , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(6)) ) )
         act.triggered.connect(fct)
         menu.addAction( act )
 
-        fct = lambda test, index = 7 : self.toggleColumnDisplay(index, index)
+        fct = lambda test = 0, index = 7 : self.toggleColumnDisplay(index, index)
         act =  QtGui.QAction("Replies" , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(7)) ) )
         act.triggered.connect(fct)
         menu.addAction( act )
 
-        fct = lambda test, index = 8 : self.toggleColumnDisplay(index, index)
+        fct = lambda test = 0, index = 8 : self.toggleColumnDisplay(index, index)
         act =  QtGui.QAction("Assignement" , menu, checkable=True, checked= not self.myTree2.header().isSectionHidden( header.logicalIndex(header.visualIndex(8)) ) )
         act.triggered.connect(fct)
         menu.addAction( act )
