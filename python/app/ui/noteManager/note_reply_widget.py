@@ -159,6 +159,8 @@ class noteContentLayout(QtGui.QWidget) :
             if dataType == "Reply" :   
                 replyButton = QtGui.QPushButton("Reply", parent = self)
                 replyButton.clicked.connect(self.replyNoteSlot)
+                replyButton.setMinimumHeight(18)
+                replyButton.setStyleSheet( "QPushButton {border: 1px solid #39B3FF;border-radius: 6px;background-color: #474747;background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 0.67, stop: 0 #6B6B6B, stop: 1  #474747);}")
 
                 self.statusLabel = QtGui.QComboBox( parent = self )
                 self.statusLabel.addItem(QtGui.QIcon(getRessources("status_opn.png")), "Open")
@@ -184,7 +186,9 @@ class noteContentLayout(QtGui.QWidget) :
 
                 replyButton = QtGui.QPushButton("Create Note",  parent = self )
                 replyButton.clicked.connect(self.createNoteSlot)
-                
+                replyButton.setMinimumHeight(18)
+                replyButton.setStyleSheet( "QPushButton {border: 1px solid #39B3FF;border-radius: 6px;background-color: #3990CA;background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 0.67, stop: 0 #3990CA, stop: 1  #215272);}")
+
 
                 layout.addWidget(replyButton)
 
