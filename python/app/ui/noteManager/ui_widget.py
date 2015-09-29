@@ -213,14 +213,20 @@ class versionWidgetCombo(QtGui.QWidget) :
             self.layout.addWidget(self.pic,QtCore.Qt.AlignLeft )
             self.pathToMovie = versionData["sg_path_to_movie"]
             self.pic.SIGNAL_imageClicked.connect(self.play_pathToMovie)
-
+            self.pic.SIGNAL_imageRightClicked.connect(self.explore_pathToMovie)
 
     ## @decorateur_try_except
     def play_pathToMovie(self, file):
-        
+
         if self.pathToMovie :
             convertPath =   OS_convertPath( self.pathToMovie )
             osSystem( convertPath )
+
+    def explore_pathToMovie(self, file):
+        print "EXPLORE"
+        if self.pathToMovie :
+            convertPath =   OS_convertPath( self.pathToMovie )
+            revealInExplorer( convertPath )
 
     ## @decorateur_try_except
     def setOnLoading(self):
@@ -304,7 +310,7 @@ class versionWidget(QtGui.QWidget) :
         pic =   PicButton(versionData["downloadedImage"],200,200, overImageName = "play.png",  doStart=True ,  parent = self )
         pic.setMaximumWidth(200)
         pic.SIGNAL_imageClicked.connect(self.play_pathToMovie)
-
+        pic.SIGNAL_imageRightClicked.connect(self.explore_pathToMovie)
 
         titleLay = QtGui.QHBoxLayout()
         titleLay.addStretch()
@@ -361,11 +367,15 @@ class versionWidget(QtGui.QWidget) :
         if self.pathToMovie :
             convertPath =   OS_convertPath( self.pathToMovie )
             osSystem( convertPath )
-
+    
+    def explore_pathToMovie(self, file = None):
+        if self.pathToMovie :
+            convertPath =   OS_convertPath( self.pathToMovie )
+            revealInExplorer( convertPath )
 
 class PicButton(QtGui.QLabel):
     SIGNAL_imageClicked = _signal(object)
-
+    SIGNAL_imageRightClicked = _signal(object)
     ## @decorateur_try_except
     def __init__(self, imageFileName, x = 100, y = 100 , overImageName = "pencil.png" , doStart=False , parent=None):
         super(PicButton, self).__init__(parent)
@@ -422,8 +432,10 @@ class PicButton(QtGui.QLabel):
     ## @decorateur_try_except
     def mousePressEvent(self, event):
         super(PicButton, self).mousePressEvent(event)
-
-        self.SIGNAL_imageClicked.emit( self.fileOnDisk)
+        if  event.button()==QtCore.Qt.LeftButton :
+            self.SIGNAL_imageClicked.emit( self.fileOnDisk)
+        else :
+            self.SIGNAL_imageRightClicked.emit( self.fileOnDisk)
 
 
     ## @decorateur_try_except

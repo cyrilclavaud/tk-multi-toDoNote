@@ -5,6 +5,8 @@
 import traceback
 import os
 import sys
+import subprocess
+
 from threading import Thread, current_thread
 
 try :
@@ -160,3 +162,44 @@ def OS_convertPath(path):
         return path.replace( "//server01/shared2/"  , "S:\\")
 
 
+
+def revealInExplorer(path):
+    print "-->"
+    if sys.platform == "darwin":
+        openInFinder(path)
+    elif sys.platform == "win32":  
+        openInWindowsExplorer(path)
+
+def openInWindowsExplorer(path): # path is supposed to exist on disk at this stage
+
+    if os.path.isfile(path):
+        cmd = 'explorer /select,"%s"' % path
+    if os.path.isdir(path):
+        cmd = 'explorer "%s"' % path
+
+    try:
+        subprocess.Popen(cmd)
+    except:
+        pass
+
+def openInTotalCommander(path, totalCommanderPath):
+
+    if not os.path.isfile(totalCommanderPath):
+        return nuke.message('Total commander executable not found.\nPlease correct your preferences.')
+
+    cmd = '%s /O /T "%s"' % (totalCommanderPath, path)
+
+    try:
+        subprocess.Popen(cmd)
+    except:
+        pass
+
+def openInFinder(path):
+
+    if os.path.isfile(path):
+        path = os.path.dirname(path)
+
+    try:
+        subprocess.call(["open", "-R", path])
+    except:
+        pass

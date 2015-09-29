@@ -930,6 +930,11 @@ class noteWidget(QtGui.QTreeWidgetItem) :
 
         self.setText(10, "note_%i"%sgData["id"] )
         self.setText(0, content )
+        #self.setIcon(0, QtGui.QIcon( getRessources("asset.png" ) ))
+        nullPic = QtGui.QPixmap(1,5)
+        nullPic.fill( QtGui.QColor( 0,0,0,0)  )
+        self.setIcon(0, QtGui.QIcon( nullPic))
+        #self.setSizeHint(0, QtCore.QSize(100,100) )
 
         masterTaskName = "NoTask"
         if sgData["tasks"] :
@@ -1253,7 +1258,6 @@ class noteWidget(QtGui.QTreeWidgetItem) :
                 return True
 
     def checkFilterAssigned(self) :
-
         filterText = self.entityAssignedFilterWidget.getText()
         text = self.text(8)
         if not isinstance(text, unicode):
@@ -1291,8 +1295,7 @@ class noteWidget(QtGui.QTreeWidgetItem) :
         status  = self.checkFilterStatus()
         user    = self.checkFilterUser() 
         content = self.checkFilterContent()
-        assignedTo = False #self.checkFilterAssigned()
-
+        assignedTo = self.checkFilterAssigned()
         task = self.checkFilterTasks()
         shot = self.checkFilterShotAsset()
 

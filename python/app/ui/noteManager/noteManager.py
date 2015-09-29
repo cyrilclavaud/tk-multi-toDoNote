@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+
+
 import _strptime
 
 import random
@@ -50,6 +52,9 @@ from note_reply_widget import *
 import launchApp_widget
 from launchApp_widget import *
 
+import notificationBar
+from notificationBar import *
+
 class NoRectDelegate(QtGui.QItemDelegate): 
     def __init__(self , parent = None):
         super(NoRectDelegate, self).__init__( parent )
@@ -76,6 +81,7 @@ class myQTree( QtGui.QTreeWidget ):
     SIGNAL_UpdateTreeWithFilter = _signal(object)
     SIGNAL_breakNoteLink = _signal(object)
     SIGNAL_querySingleNoteContent = _signal(object)
+    SIGNAL_notifySomebody = _signal(object)
 
 
 
@@ -169,6 +175,8 @@ class myQTree( QtGui.QTreeWidget ):
                 
                 
                 menu.addAction(QtGui.QIcon(getRessources("sequence.png")), "Select Shot/Asset(s)",  lambda : self.SIGNAL_selectShot.emit( self.selectedItems() )  )
+
+
                 menu.addSeparator()
                 deleteMenu = menu.addAction(QtGui.QIcon(getRessources("TrashRed.png")),"Delete note(s)",  lambda : self.SIGNAL_deleteNotes.emit( [self.selectedItems()] )  )
 
@@ -373,7 +381,10 @@ class myQTree( QtGui.QTreeWidget ):
 
                 
                 QtGui.QTreeWidget.drawRow(self, painter, option, index )
-                
+                pen = QtGui.QPen(QtGui.QColor(255,255,255,255))
+                pen.setWidth(3)
+                painter.setPen(pen)
+                painter.drawLine(testRect.topLeft().x()+5, testRect.topLeft().y()+8,  testRect.bottomLeft().x()+5,  testRect.topLeft().y()+8 )
 
             else :
                 if index.row() % 2 :
@@ -381,11 +392,17 @@ class myQTree( QtGui.QTreeWidget ):
                 else :
                     painter.fillRect( testRect , QtGui.QColor(0,0,0, 80) )
 
-
                 QtGui.QTreeWidget.drawRow(self, painter, option, index )
                 pen = QtGui.QPen(QtGui.QColor(0,0,0,35))
                 painter.setPen(pen)
                 painter.drawLine(testRect.bottomLeft(),testRect.bottomRight() )
+
+
+
+                pen = QtGui.QPen(QtGui.QColor(0,0,0,105))
+                pen.setWidth(3)
+                painter.setPen(pen)
+                painter.drawLine(testRect.topLeft().x()+5, testRect.topLeft().y()+7,  testRect.bottomLeft().x()+5,  testRect.topLeft().y()+7 )
 
         painter.restore()
        
@@ -428,7 +445,7 @@ class myQueue( Queue.PriorityQueue ) :
 
     ## @decorateur_try_except 
     def getCount(self):
-        return self.count
+        return self.count-1
 
     ## @decorateur_try_except 
     def task_done(self):
@@ -439,7 +456,7 @@ class myQueue( Queue.PriorityQueue ) :
 
 
 class Example(QtGui.QWidget):
-
+    _ToDoNote_VERSION = "1.0"
 
 
     def __del__(self):
@@ -559,11 +576,11 @@ class Example(QtGui.QWidget):
                             {"text" : "Anim", "icon" : "task_animation.png", "values": ["Animation","animation","anim", "Anim"]  },
                             {"text" : "layout", "icon" : "task_layout.png" , "values": ["Layout", "layout"] },
                             {"text" : "Fur", "icon" : "task_fur.png" , "values": ["fur","Fur"] },
-                            {"text" : "Fx",  "icon" : "task_fx.png" , "values": [ "fx", "FX", "Fx", "fX" ] },
-                            {"text" : "Surface", "icon" : "task_surfacing.png" , "values": ["Surface"] },             
+                            {"text" : "Fx",  "icon" : "task_fx.png" , "values": [ "fx", "FX", "Fx", "fX", "nCloth", "Groom" ] },
+                            {"text" : "Surface", "icon" : "task_surfacing.png" , "values": ["Surface", "Surfacing"] },             
                             {"text" : "modeling", "icon" : "task_modelisation.png" , "values": ["Modeling", "Model" ,"modeling", "retopo"] },
                             {"text" : "rigging", "icon" : "task_rig.png" , "values": ["Rig", "rig", "rigging", "Rigging"] },
-                            {"text" : "Art", "icon" : "task_art.png" , "values": ["Art","art"] },  
+                            {"text" : "Art", "icon" : "task_art.png" , "values": ["Art","art","Design"] },  
                             {"text" : "NoTask", "icon" : "task.png" , "values": ["NoTask"] }
                           ]
         
@@ -602,6 +619,8 @@ class Example(QtGui.QWidget):
             type_entriesDictList = self.setCheckedFromValue(type_entriesDictList, ["To Do", "NoType"] )
         self.typeFilterWidget = comboFilterWidget2( {"name":"Type" , "icon": "type.png"}, type_entriesDictList, multiCheckable = True ) 
 
+        self.noteBarWidget = None 
+
         print "creating threads" 
         for i in range(9) :
 
@@ -629,6 +648,8 @@ class Example(QtGui.QWidget):
                 sg.SIGNAL_updateLaunchAppWidget.connect(self.updateLauncherWidget)
 
                 sg.start()
+
+                self.noteBarWidget = QtGui.QLabel("<b><font color='#425C73'> Launch Bar </font></b>") #NotificationBar(docLoad() )
                 
             else :
                 self.sg = sg
@@ -659,6 +680,9 @@ class Example(QtGui.QWidget):
                 sg.SIGNAL_updateLaunchAppWidget.connect(self.updateLauncherWidget)
 
                 sg.SIGNAL_pbar.connect(self.updateProgressBar)
+
+                sg.SIGNAL_heartBeat.connect(self.heartBeat )
+
 
                 sg.start()
     
@@ -695,6 +719,7 @@ class Example(QtGui.QWidget):
      
         self.queue.put( [ 3,u"deleteEmptySpawnLink"  , None , None ]  )
         self.queue.put( [ 3,u"fillSeqShotTree"  , None , None ] )
+        self.queue.put( [ 3,u"timer"  , None , None]  )
 
         self.shotTreeSelection_id_List = []
 
@@ -724,6 +749,27 @@ class Example(QtGui.QWidget):
         return entriesDictList
 
 
+
+    def get_serialized_version(self):
+
+        pathToDataFile =   os.path.join(getUserTempPath(), "noteAppUi_filters.dat") 
+        if os.path.isfile(pathToDataFile) :
+            taskFilterStates = None
+            typeFilterStates = None
+            statusFilterStates = None
+            last_ToDoNote_VERSION = None
+            try :
+                with open(pathToDataFile) as f :
+                    exec( f.read() )
+            except :
+                "print cant restore widget state "
+
+            return last_ToDoNote_VERSION
+
+        else :
+            return None      
+
+
     ## @decorateur_try_except 
     def serialize_comboFilterWidget(self, save = True) :
 
@@ -741,6 +787,7 @@ class Example(QtGui.QWidget):
                 taskFilterStates = None
                 typeFilterStates = None
                 statusFilterStates = None
+                last_ToDoNote_VERSION = None
                 try :
                     with open(pathToDataFile) as f :
                         exec( f.read() )
@@ -759,6 +806,7 @@ class Example(QtGui.QWidget):
             comboFilterStateFile.write("taskFilterStates = " + str( self.taskFilterWidget.getCheckedBoolList() ) + "\n" )
             comboFilterStateFile.write("typeFilterStates = " + str( self.typeFilterWidget.getCheckedBoolList() ) + "\n" )
             comboFilterStateFile.write("statusFilterStates = " + str( self.statusFilterWidget.getCheckedBoolList() ) + "\n" )
+            comboFilterStateFile.write("last_ToDoNote_VERSION = '"+str(self.ToDoNote_VERSION) +"'\n" )
 
             comboFilterStateFile.close()
 
@@ -984,7 +1032,7 @@ class Example(QtGui.QWidget):
         self.statusFilterWidget.widget.currentIndexChanged.connect( self.updateTree2_withFilter )
         self.userNameFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
         self.contentFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
-        #self.entityAssignedFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
+        self.entityAssignedFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
         self.shotAssetFilterWidget.widget.textChanged.connect(self.updateTree2_withFilter)
 
         self.shotAssetFilterWidget.widget.textChanged.connect(self.updateTree1_withFilter)
@@ -1007,6 +1055,7 @@ class Example(QtGui.QWidget):
         self.myTree2.SIGNAL_linkToLastVersion.connect(self.linkToLastVersion)
         self.myTree2.SIGNAL_UpdateTreeWithFilter.connect(self.updateTree2_withFilter)
         self.myTree2.SIGNAL_querySingleNoteContent.connect(self.querySingleNoteContent)
+        self.myTree2.SIGNAL_notifySomebody.connect(self.notifySomebody)
 
 
 
@@ -1090,6 +1139,10 @@ class Example(QtGui.QWidget):
     #########
     #########
     #############################################
+
+
+    def notifySomebody(self, itemList):
+        print itemList
 
 
     ## @decorateur_try_except
@@ -1281,6 +1334,7 @@ class Example(QtGui.QWidget):
             except Empty:
                 continue
             self.queue.task_done()
+            self.queue.count = 0
 
 
         if not self.myTree.selectedItems() :
@@ -1288,7 +1342,7 @@ class Example(QtGui.QWidget):
             self.myTree2.clear()
             self.queue.put( [ 3,u"deleteEmptySpawnLink"  , None , None ]  )
             self.queue.put( [ 3,u"fillSeqShotTree"  , None , None ] )
-
+            self.queue.count = 0
 
         self.shotTreeClicked(True) 
 
@@ -1618,6 +1672,19 @@ class Example(QtGui.QWidget):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
     ############################################
     #####
     #####       SLOTS CONNECTED TO THE THREADING CLASS
@@ -1627,6 +1694,60 @@ class Example(QtGui.QWidget):
     #####
     #####
     ############################################
+
+    def heartBeat(self):
+
+        self.updateLauncherWidget( [{"clear":True}, 0 , "", "", [] ]) 
+        
+
+        selectedItemList = self.myTree2.selectedItems()
+        
+        taskList = []
+        noteData = []
+        for itemW in selectedItemList :
+
+            if str(itemW.text(10)).startswith("note") :
+                if itemW.sgData["tasks"] :
+                    taskValues = self.taskFilterWidget.retrieveValueFromName(itemW.sgData["tasks"][0]['name'])
+                    itemW.sgData["taskValues"] = taskValues
+                else :
+                    itemW.sgData["taskValues"] = []
+                
+                noteData.append( itemW.sgData )
+    
+
+            elif str(itemW.text(10)).startswith("task") :
+                taskList.append(str( itemW.text(0) ) )
+
+
+        if noteData :
+            if len(noteData) == 1 :
+
+                taskValues = [] 
+                taskName = ""
+                if noteData[0]["tasks"] :
+                    taskValues = self.taskFilterWidget.retrieveValueFromName( noteData[0]["tasks"][0]["name"] )
+                    taskName =   self.taskFilterWidget.retrieveNameFromValue( noteData[0]["tasks"][0]["name"] )
+    
+                if not taskValues :
+                    taskName = "NoTask"
+                    taskValues = [ "NoTask" ]
+
+                # flushSgtkQueue
+                while not self.sgtkQueue.empty():
+                    try:
+                        self.sgtkQueue.get(False)
+                    except Empty:
+                        continue
+                    self.sgtkQueue.task_done()
+
+                self.sgtkQueue.put([-5, u"getExecutable",   [noteData[0]["shotId"], taskValues, taskName , noteData[0]["shotCode"], noteData[0]["shotType"] ] , None ] )
+
+
+        else : # selectedItemList :
+            self.rightLayout.itemAt(0).widget().getVersion(0)
+            #self.drawNote(taskList)
+
 
     def setShotAsset_taskAssigned(self, obj):
         print "********* ", obj
@@ -1647,14 +1768,20 @@ class Example(QtGui.QWidget):
             return
 
 
+
+        
+
+
+
         QtGui.QApplication.processEvents()
         w = self.mainLayout.itemAt(2)
         if w :
             bar = w.widget()
+
             if obj[1] == 0 :
                 bar.setParent(None)
                 bar.deleteLater()            
-                self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4]   ,empty = True,  SGTK_ENGINE=self.SGTK_ENGINE ,parent = self ) )
+                self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget , empty = True,  SGTK_ENGINE=self.SGTK_ENGINE ,parent = self ) )
                 QtGui.QApplication.processEvents()
                 return 
             
@@ -1667,7 +1794,7 @@ class Example(QtGui.QWidget):
 
                         bar.setParent(None)
                         bar.deleteLater()
-                        self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4]   , SGTK_ENGINE=self.SGTK_ENGINE, parent = self)  )
+                        self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget  , empty = False, SGTK_ENGINE=self.SGTK_ENGINE, parent = self)  )
                         QtGui.QApplication.processEvents()
                     #QtGui.QApplication.processEvents()
                     return
@@ -1676,17 +1803,17 @@ class Example(QtGui.QWidget):
                 if obj[0].has_key("clear") :
                     bar.setParent(None)
                     bar.deleteLater()
-                    self.mainLayout.addWidget(  LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4]   , empty = True , SGTK_ENGINE=self.SGTK_ENGINE,  parent = self )  )
+                    self.mainLayout.addWidget(  LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget  , empty = True, SGTK_ENGINE=self.SGTK_ENGINE,  parent = self )  )
                     QtGui.QApplication.processEvents()
                 else :
                     return
                     
         else :
-            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4]   , empty = True ,  SGTK_ENGINE=self.SGTK_ENGINE , parent = self )   )
+            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget  , empty = True, SGTK_ENGINE=self.SGTK_ENGINE, parent = self )   )
 
 
         if not obj[0].has_key("clear") :
-            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4]   ,  SGTK_ENGINE=self.SGTK_ENGINE, parent = self )  )
+            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget  , empty = False, SGTK_ENGINE=self.SGTK_ENGINE, parent = self )  )
 
 
 

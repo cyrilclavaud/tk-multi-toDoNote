@@ -21,6 +21,9 @@ from utils import *
 import ui_widget
 from ui_widget import *
 
+import notificationBar
+from notificationBar import *
+
 import os
 
 class launchBtn(QtGui.QPushButton) :
@@ -170,7 +173,7 @@ class LaunchApp_widget( QtGui.QWidget ):
 
 
     ## @decorateur_try_except
-    def __init__(self, new_appLauncherDict, shotId, taskName, entityCode, sgTaskDict,  empty = False, SGTK_ENGINE = None, parent = None  ) :
+    def __init__(self, new_appLauncherDict, shotId, taskName, entityCode, sgTaskDict,  noteBarW = None, empty = False, SGTK_ENGINE = None, parent = None  ) :
 
 
 
@@ -197,7 +200,11 @@ class LaunchApp_widget( QtGui.QWidget ):
         lab.setMinimumHeight(32)
 
         layout.addSpacing(9)
-        layout.addWidget(QtGui.QLabel("<b><font color='#425C73'> Launch Bar </font></b>"))
+        if noteBarW :
+            layout.addWidget(noteBarW)
+        else :
+            layout.addWidget(QtGui.QLabel("<b><font color='#425C73'> Launch Bar </font></b>"))
+
         layout.addStretch()
         layout.addWidget(lab)
         layout.addSpacing(9)

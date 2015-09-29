@@ -57,7 +57,7 @@ class sg_query(QtCore.QThread) :
 
 
     SIGNAL_updateLaunchAppWidget = _signal(object)
-
+    SIGNAL_heartBeat = _signal()
 
 
     SIGNAL_pbar = _signal(int)
@@ -281,6 +281,8 @@ class sg_query(QtCore.QThread) :
         elif stringCommandSwitch == u"queryNote_spawned":
             self.queryNote_spawned(threadCommandArgs, threadCommandCallBack )
 
+        elif stringCommandSwitch == u"timer":
+            self.timer(None,None)
 
 
     ## @decorateur_try_except
@@ -1191,9 +1193,17 @@ class sg_query(QtCore.QThread) :
 
             self.SIGNAL_refreshNote.emit( [ noteDict , True ] )
 
+    def timer(self, data, callback ):
+        time.sleep(10)
+
+        self.SIGNAL_heartBeat.emit()
+        self.queue.put( [1000000, u"timer", None, None] ) 
+
+
     # RUN THREADING
     def run(self):
         while True:
+
             host = self.queue.get()
 
             

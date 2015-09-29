@@ -159,6 +159,7 @@ class noteContentLayout(QtGui.QWidget) :
             if dataType == "Reply" :   
                 replyButton = QtGui.QPushButton("Reply", parent = self)
                 replyButton.clicked.connect(self.replyNoteSlot)
+                #replyButton.setStyleSheet("QPushButton {border: 1px solid #199909;border-radius: 6px;background-color: #116a06;}")
                 replyButton.setMinimumHeight(18)
                 replyButton.setStyleSheet( "QPushButton {border: 1px solid #39B3FF;border-radius: 6px;background-color: #474747;background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 0.67, stop: 0 #6B6B6B, stop: 1  #474747);}")
 
@@ -185,10 +186,11 @@ class noteContentLayout(QtGui.QWidget) :
                 #self.linkFilterWidget = comboFilterWidget2()
 
                 replyButton = QtGui.QPushButton("Create Note",  parent = self )
-                replyButton.clicked.connect(self.createNoteSlot)
                 replyButton.setMinimumHeight(18)
                 replyButton.setStyleSheet( "QPushButton {border: 1px solid #39B3FF;border-radius: 6px;background-color: #3990CA;background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 0.67, stop: 0 #3990CA, stop: 1  #215272);}")
 
+                replyButton.clicked.connect(self.createNoteSlot)
+                
 
                 layout.addWidget(replyButton)
 
@@ -867,6 +869,9 @@ class noteLayoutWidget(QtGui.QWidget) :
 
     ## ## @decorateur_try_except
     def getVersion(self, idx):
+
+        if not hasattr(self, "shotComboBox") :
+            return
 
 
         shotIdx = self.shotComboBox.currentIndex()
