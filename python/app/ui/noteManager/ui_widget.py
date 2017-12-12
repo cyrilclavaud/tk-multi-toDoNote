@@ -179,7 +179,7 @@ class versionWidgetCombo(QtGui.QWidget) :
             self.userQt.setText("User : None" )
             self.dateQt.setText("Created : None" )
             self.taskQt.setText("Task : None")
-
+            self.pic.setVisible(False)
             self.pic.setParent(None)
             self.pic = PicButton( getRessources( "empty.png"),50,50, overImageName = None)
             #self.pic.setMaximumWidth(2000)
@@ -206,6 +206,7 @@ class versionWidgetCombo(QtGui.QWidget) :
             if versionData['sg_task']  :
                 versionText =versionData['sg_task']["name"]
             self.taskQt.setText("%s : <b>%s</b"%("Task", versionText ) ) 
+            self.pic.setVisible(False)
             self.pic.setParent(None)
             self.pic = PicButton( versionData["downloadedImage"] ,200,200, overImageName = "play.png",  doStart=True)
             
@@ -217,13 +218,13 @@ class versionWidgetCombo(QtGui.QWidget) :
 
     ## @decorateur_try_except
     def play_pathToMovie(self, file):
-
+        print "PLAY ", self.pathToMovie
         if self.pathToMovie :
             convertPath =   OS_convertPath( self.pathToMovie )
             osSystem( convertPath )
 
     def explore_pathToMovie(self, file):
-        print "EXPLORE"
+        print "EXPLORE ", self.pathToMovie
         if self.pathToMovie :
             convertPath =   OS_convertPath( self.pathToMovie )
             revealInExplorer( convertPath )
@@ -231,6 +232,7 @@ class versionWidgetCombo(QtGui.QWidget) :
     ## @decorateur_try_except
     def setOnLoading(self):
         if self.pic :
+            self.pic.setVisible(False)
             self.pic.setParent(None)
         self.pic = loadingWidget( parent = self )
         self.pic.setMaximumWidth(50)
@@ -240,7 +242,7 @@ class versionWidgetCombo(QtGui.QWidget) :
     def updateWidget(self, datas ):
         self.versionDatas= datas[0]
 
-
+        self.pic.setVisible(False)
         self.pic.setParent(None)
 
 

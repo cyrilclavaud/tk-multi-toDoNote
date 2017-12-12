@@ -614,7 +614,7 @@ class comboFilterWidget2(QtGui.QWidget):
             self.drawComplex = True
         
         
-        QtGui.QApplication.processEvents()
+        #QtGui.QApplication.processEvents()
         self.widget.repaint()
         
         self.widget.currentIndexChanged.emit(0)

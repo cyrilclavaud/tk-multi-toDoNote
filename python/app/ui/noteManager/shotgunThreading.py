@@ -36,7 +36,7 @@ class sg_query(QtCore.QThread) :
 
     SERVER_PATH = "https://nozon.shotgunstudio.com"
     SCRIPT_NAME = 'noteManager'     
-    SCRIPT_KEY = '3fbb2a5f180457af709fcad231c96ac8a916711427af5a06c47eb1758690f6e4'
+    SCRIPT_KEY = '30b93ec002ce2e22ecd6fb31fdda6063797deed1d612b4f6ca39e8030104707c'
 
     SIGNAL_queryAllShot = _signal(object)
     SIGNAL_queryAllAsset = _signal(object)
@@ -67,14 +67,15 @@ class sg_query(QtCore.QThread) :
 
 
     ## @decorateur_try_except
-    def __init__(self, app, parent = None ):
+    def __init__(self, app, useSGTK = False, parent = None ):
 
         super(sg_query, self).__init__( parent )
 
-
+        self.useSGTK = useSGTK
         self.sg_userDict = None
 
         if not app :
+            print "cant find shotgun app => standalone "
             sys.path.append( getPathToShotgunApi() )
 
             from shotgun_api3 import Shotgun
@@ -83,13 +84,14 @@ class sg_query(QtCore.QThread) :
         else :
             #self.sg = app.engine.tank.shotgun # too slow
             path_to_shotgunApi = getPathToShotgunApi()
-            if path_to_shotgunApi :
+            if path_to_shotgunApi and  self.useSGTK == False:
                 sys.path.append( path_to_shotgunApi )
                 from shotgun_api3 import Shotgun
+                print "get external shotgun API in ", path_to_shotgunApi 
                 self.sg = Shotgun(self.SERVER_PATH, self.SCRIPT_NAME, self.SCRIPT_KEY)
                 pprint("thread init \n" )
             else :
-              
+                print "get tank shotgun API in"
                 self.sg = app.engine.tank.shotgun # too slow
 
             self.sg_userDict = app.context.user
@@ -135,11 +137,12 @@ class sg_query(QtCore.QThread) :
         
         sgTank = None
         if useSGTK :
+            print "! Go on with stgTk !"
             try :
                 import sgtk
                 print "\nTank instantiation."
-                sgTank= sgtk.sgtk_from_entity(  "Project", projectId)
-                
+                sgTank = sgtk.sgtk_from_entity(  "Project", projectId)
+                print sgTank
                 if self.coreVersionCheck(sgTank.version, 'v0.15') :
                     print "local synchronization of the path cache dataBase."
                     sgTank.synchronize_filesystem_structure()
@@ -147,6 +150,7 @@ class sg_query(QtCore.QThread) :
             except :
                 print(traceback.format_exc())
                 pass
+            print "! stgTk DONE !"
         self.tk =  sgTank
 
     def setTempPath(self) :
@@ -259,7 +263,7 @@ class sg_query(QtCore.QThread) :
             self.setNoteTask(threadCommandArgs, threadCommandCallBack)
 
         elif stringCommandSwitch == u"getExecutable" :
-            #pass
+            
             self.getExecutable(threadCommandArgs, threadCommandCallBack)
 
         elif stringCommandSwitch == u"setNoteLink" :
@@ -1019,9 +1023,17 @@ class sg_query(QtCore.QThread) :
     def deleteEmptySpawnLink(self, data = None, threadCommandCallBack = None ):
         print "checking improper spawned link entries..." 
         projectFilter = ['project','is', { 'type':'Project', 'id':self.project} ]
+
         Complex_TaskFilter    ={ "filter_operator": "any",  "filters": [['sg_note','is', None], ['sg_note_links', 'is', None]  ]   }
+
+        
+
         spawnLinkList = self.sg.find("CustomEntity04",[projectFilter, Complex_TaskFilter  ] )
+
+        
+
         for spawLink in spawnLinkList :
+            
             self.sg.delete("CustomEntity04", spawLink['id'])
             print "deleting improper spawned link entries"
         
@@ -1194,6 +1206,9 @@ class sg_query(QtCore.QThread) :
             self.SIGNAL_refreshNote.emit( [ noteDict , True ] )
 
     def timer(self, data, callback ):
+        
+        return ;
+        
         time.sleep(10)
 
         self.SIGNAL_heartBeat.emit()

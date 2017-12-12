@@ -383,7 +383,7 @@ class noteLayoutWidget(QtGui.QWidget) :
             self.taskFilterWidget.drawComplex = True
 
 
-        QtGui.QApplication.processEvents()
+        #QtGui.QApplication.processEvents()
         self.taskFilterWidget.widget.repaint()
 
 
@@ -494,7 +494,7 @@ class noteLayoutWidget(QtGui.QWidget) :
                     continue
 
 
-                if len(availableTaskList) == 0 :
+                if not availableTaskList :
                     if "NoTask" in entriesDictList[idx]["values"] :
                         entriesDictList[idx]["checked"] = True
                     else :
@@ -885,10 +885,10 @@ class noteLayoutWidget(QtGui.QWidget) :
             except Empty:
                 continue
             self.sgtkQueue.task_done()
+        self.sgtkQueue.put([-10, u"getVersion",  [ [self.shotWidgetItemList[shotIdx]["id"], self.shotWidgetItemList[shotIdx]["type"] ]  , self.taskFilterWidget.retrieveDictFromSelection(), [self.shotComboBox.currentText(), self.taskFilterWidget.widget.currentText() ] ] , None ] )
         self.sgtkQueue.put([-5, u"getExecutable",   [self.shotWidgetItemList[shotIdx]["id"], self.taskFilterWidget.retrieveDictFromSelection(), str(self.taskFilterWidget.widget.currentText()), self.shotWidgetItemList[shotIdx]["code"], self.shotWidgetItemList[shotIdx]["type"]  ] , None ] ) 
-        
-        self.queue.put([0, u"getVersion",  [ [self.shotWidgetItemList[shotIdx]["id"], self.shotWidgetItemList[shotIdx]["type"] ]  , self.taskFilterWidget.retrieveDictFromSelection(), [self.shotComboBox.currentText(), self.taskFilterWidget.widget.currentText() ] ] , None ] )
 
+        
 
         
         if self.receiveFocusWidget :

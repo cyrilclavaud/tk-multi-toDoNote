@@ -232,16 +232,19 @@ class NotificationBar(QtGui.QWidget):
         return QtGui.QWidget.eventFilter(self, widget, event)
 
     def writeNotification(self):
+        self.label.setVisible(False)
         self.label.setParent(None)
         self.lay.addWidget(self.labelEdit )
         self.labelEdit.writeWho.setFocus()
 
     def stopWritingNotification(self):
+        self.label.setVisible(False)
         self.labelEdit.setParent(None)
         self.lay.addWidget(self.label )
 
 
     def answerNotifcation(self):
+        self.label.setVisible(False)
         self.label.setParent(None)
         self.lay.addWidget(self.labelAnswer )
         self.labelAnswer.writeWhat.setFocus()

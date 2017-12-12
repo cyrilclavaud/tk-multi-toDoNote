@@ -471,6 +471,8 @@ class Example(QtGui.QWidget):
     def __init__(self ):
         self.__initStyle()
 
+        print "DEV VERSION !!!!"
+
         perr("",True)
         plog("",True)
         pprint("",True)
@@ -493,7 +495,7 @@ class Example(QtGui.QWidget):
         except :
             pass
 
-        if "USE THREADING" :
+        if True: #not sys.platform == "darwin":
             self.queue = myQueue() #Queue.PriorityQueue()
             self.sgtkQueue = myQueue()
         else :
@@ -571,7 +573,7 @@ class Example(QtGui.QWidget):
 
         ############# TASK
         task_entriesDictList = [ {"text" : "All", "icon" : None, "values": []  },
-                            {"text" : "Compo", "icon" : "task_compo.png", "values": ["Compositing", "Comp", "Compo"] },
+                            {"text" : "Compo", "icon" : "task_compo.png", "values": ["Compositing", "Comp", "Compo","comp"] },
                             {"text" : "lighting", "icon" : "task_lit.png" , "values": ["Lighting", "lighting"]  },
                             {"text" : "Anim", "icon" : "task_animation.png", "values": ["Animation","animation","anim", "Anim"]  },
                             {"text" : "layout", "icon" : "task_layout.png" , "values": ["Layout", "layout"] },
@@ -621,38 +623,42 @@ class Example(QtGui.QWidget):
 
         self.noteBarWidget = None 
 
+        self.sg = None
         print "creating threads" 
         for i in range(9) :
 
-            sg = sg_query( self._app  )            
+       
             print i,
 
-            if i == 0 :
-                self.sg = sg
+            if i == 0 and self.engineName in ["tk-shotgun", "tk-desktop", "tk-shell"] :
+                print "Shotgun toolkit thread init"
+                sg = sg_query( self._app, useSGTK = False  ) 
+                sg.setProjectId(projectId, useSGTK = True )
+                sg.setTempPath()
+                sg.setAppLauncher(self.appLauncherDict)
+                sg.setTypeFilterWidget(self.typeFilterWidget)
+                sg.SIGNAL_queryVersion.connect(self.updateDrawNote_versions)
+                sg.queue=self.sgtkQueue
+                sg.th_id = i                
+                
+                sg.SIGNAL_updateLaunchAppWidget.connect(self.updateLauncherWidget)
+                sg.start()
+
+                print "Shotgun toolkit thread starts Done"
+                self.noteBarWidget = QtGui.QLabel("<b><font color='#425C73'> Launch Bar </font></b>") #NotificationBar(docLoad() )
+            
+            elif i == 1 :
+                sg = sg_query( self._app  ) 
                 sg.setProjectId(projectId, useSGTK = False )
                 sg.setTempPath()
                 sg.setAppLauncher(self.appLauncherDict)
                 sg.setTypeFilterWidget(self.typeFilterWidget)
                 task_entriesDictList = sg.get_projectTaskList( task_entriesDictList )
 
-            elif i == 2 and self.engineName in ["tk-shotgun", "tk-desktop", "tk-shell"] :
-                self.sg = sg
-                sg.setProjectId(projectId, useSGTK = True )
-                sg.setTempPath()
-                sg.setAppLauncher(self.appLauncherDict)
-                sg.setTypeFilterWidget(self.typeFilterWidget)
 
-                sg.queue=self.sgtkQueue
-                sg.th_id = i                
-                
-                sg.SIGNAL_updateLaunchAppWidget.connect(self.updateLauncherWidget)
-
-                sg.start()
-
-                self.noteBarWidget = QtGui.QLabel("<b><font color='#425C73'> Launch Bar </font></b>") #NotificationBar(docLoad() )
                 
             else :
-                self.sg = sg
+                sg = sg_query( self._app  ) 
                 sg.setProjectId(projectId, useSGTK = False )
                 sg.setTempPath()
                 sg.setAppLauncher(self.appLauncherDict)
@@ -683,8 +689,9 @@ class Example(QtGui.QWidget):
 
                 sg.SIGNAL_heartBeat.connect(self.heartBeat )
 
-
                 sg.start()
+                if not self.sg :
+                    self.sg = sg
     
 
         print "\ncreating threads done\n" 
@@ -719,7 +726,7 @@ class Example(QtGui.QWidget):
      
         self.queue.put( [ 3,u"deleteEmptySpawnLink"  , None , None ]  )
         self.queue.put( [ 3,u"fillSeqShotTree"  , None , None ] )
-        self.queue.put( [ 3,u"timer"  , None , None]  )
+        #self.queue.put( [ 3,u"timer"  , None , None]  )
 
         self.shotTreeSelection_id_List = []
 
@@ -806,7 +813,7 @@ class Example(QtGui.QWidget):
             comboFilterStateFile.write("taskFilterStates = " + str( self.taskFilterWidget.getCheckedBoolList() ) + "\n" )
             comboFilterStateFile.write("typeFilterStates = " + str( self.typeFilterWidget.getCheckedBoolList() ) + "\n" )
             comboFilterStateFile.write("statusFilterStates = " + str( self.statusFilterWidget.getCheckedBoolList() ) + "\n" )
-            comboFilterStateFile.write("last_ToDoNote_VERSION = '"+str(self.ToDoNote_VERSION) +"'\n" )
+            comboFilterStateFile.write("last_ToDoNote_VERSION = '"+str(self._ToDoNote_VERSION) +"'\n" )
 
             comboFilterStateFile.close()
 
@@ -1119,6 +1126,7 @@ class Example(QtGui.QWidget):
     def clearRightLayout(self) :
         for i in reversed(range(self.rightLayout.count())):   
             wid =  self.rightLayout.itemAt(i).widget()
+            wid.setVisible(False)
             wid.setParent(None)
             wid.deleteLater()
 
@@ -1304,7 +1312,7 @@ class Example(QtGui.QWidget):
     def drawNote(self, taskList = []):
         
 
-        QtGui.QApplication.processEvents()
+        #QtGui.QApplication.processEvents()
         my_noteLayoutWidget = noteLayoutWidget( None,  [ self.getShotItemList(), self.taskFilterWidget, self.typeFilterWidget, self.statusFilterWidget, self.shotAssetFilterWidget, self.entityAssignedFilterWidget ],  threadQueue = self.queue, sgtkQueue = self.sgtkQueue )
         self.clearRightLayout()
         self.rightLayout.addWidget(  my_noteLayoutWidget  )
@@ -1318,7 +1326,7 @@ class Example(QtGui.QWidget):
             if not self.shotAssetFilterWidget.widget.hasFocus() :
                 my_noteLayoutWidget.receiveFocusWidget.setFocus()
         
-        QtGui.QApplication.processEvents()
+        #QtGui.QApplication.processEvents()
 
     ## @decorateur_try_except
     def createNewNote(self, obj) :
@@ -1351,7 +1359,7 @@ class Example(QtGui.QWidget):
         if self.shotAssetFilterWidget.widget.text() == "" and self.entityAssignedFilterWidget.widget.text() == "":
             return
         else :
-            QtGui.QApplication.processEvents()
+            #QtGui.QApplication.processEvents()
             self.myTree.clearSelection()
 
 
@@ -1368,11 +1376,12 @@ class Example(QtGui.QWidget):
             self.shotTreeClicked(True) 
     ## @decorateur_try_except
     def shotTreeClicked(self, forceRedraw = False) :
-        QtGui.QApplication.processEvents()
+        #QtGui.QApplication.processEvents()
 
+        
         if not self.myTree.selectedItems() :
             self.updateLauncherWidget( [{"clear":True}, 0 , "", "" ,[] ]) 
-
+        
 
         if not forceRedraw :
             redrawTreeNote = False
@@ -1696,7 +1705,7 @@ class Example(QtGui.QWidget):
     ############################################
 
     def heartBeat(self):
-
+        print "HEART BEAT !"
         self.updateLauncherWidget( [{"clear":True}, 0 , "", "", [] ]) 
         
 
@@ -1743,7 +1752,6 @@ class Example(QtGui.QWidget):
 
                 self.sgtkQueue.put([-5, u"getExecutable",   [noteData[0]["shotId"], taskValues, taskName , noteData[0]["shotCode"], noteData[0]["shotType"] ] , None ] )
 
-
         else : # selectedItemList :
             self.rightLayout.itemAt(0).widget().getVersion(0)
             #self.drawNote(taskList)
@@ -1760,7 +1768,7 @@ class Example(QtGui.QWidget):
 
     ## @decorateur_try_except
     def updateLauncherWidget(self, obj) :
-
+  
 
         if not self.engineName in ["tk-shotgun", "tk-desktop", "tk-shell"] :
             return 
@@ -1769,53 +1777,55 @@ class Example(QtGui.QWidget):
 
 
 
-        
 
 
+        try :
+            #QtGui.QApplication.processEvents()
+            w = self.mainLayout.itemAt(2)
+            if w :
+                bar = w.widget()
 
-        QtGui.QApplication.processEvents()
-        w = self.mainLayout.itemAt(2)
-        if w :
-            bar = w.widget()
+                if obj[1] == 0 :
+                    bar.setVisible(False)
+                    bar.setParent(None)
+                    bar.deleteLater()            
+                    self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget , empty = True,  SGTK_ENGINE=self.SGTK_ENGINE ,parent = self ) )
+                    #QtGui.QApplication.processEvents()
+                    return 
+                
+                if bar.shotId == obj[1] and bar.taskName == obj[2] :
 
-            if obj[1] == 0 :
-                bar.setParent(None)
-                bar.deleteLater()            
-                self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget , empty = True,  SGTK_ENGINE=self.SGTK_ENGINE ,parent = self ) )
-                QtGui.QApplication.processEvents()
-                return 
-            
-            if bar.shotId == obj[1] and bar.taskName == obj[2] :
-
-                if obj[0].has_key("clear"):
-                    return
+                    if obj[0].has_key("clear"):
+                        return
+                    else :
+                        if bar.empty :
+                            bar.setVisible(False)
+                            bar.setParent(None)
+                            bar.deleteLater()
+                            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget  , empty = False, SGTK_ENGINE=self.SGTK_ENGINE, parent = self)  )
+                            #QtGui.QApplication.processEvents()
+                        #QtGui.QApplication.processEvents()
+                        return
                 else :
-                    if bar.empty :
 
+                    if obj[0].has_key("clear") :
+                        bar.setVisible(False)
                         bar.setParent(None)
                         bar.deleteLater()
-                        self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget  , empty = False, SGTK_ENGINE=self.SGTK_ENGINE, parent = self)  )
-                        QtGui.QApplication.processEvents()
-                    #QtGui.QApplication.processEvents()
-                    return
+                        self.mainLayout.addWidget(  LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget  , empty = True, SGTK_ENGINE=self.SGTK_ENGINE,  parent = self )  )
+                        #QtGui.QApplication.processEvents()
+                    else :
+                        return
+                        
             else :
-
-                if obj[0].has_key("clear") :
-                    bar.setParent(None)
-                    bar.deleteLater()
-                    self.mainLayout.addWidget(  LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget  , empty = True, SGTK_ENGINE=self.SGTK_ENGINE,  parent = self )  )
-                    QtGui.QApplication.processEvents()
-                else :
-                    return
-                    
-        else :
-            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget  , empty = True, SGTK_ENGINE=self.SGTK_ENGINE, parent = self )   )
+                self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget  , empty = True, SGTK_ENGINE=self.SGTK_ENGINE, parent = self )   )
 
 
-        if not obj[0].has_key("clear") :
-            self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget  , empty = False, SGTK_ENGINE=self.SGTK_ENGINE, parent = self )  )
-
-
+            if not obj[0].has_key("clear") :
+                self.mainLayout.addWidget( LaunchApp_widget( obj[0], obj[1], obj[2], obj[3], obj[4], noteBarW = self.noteBarWidget  , empty = False, SGTK_ENGINE=self.SGTK_ENGINE, parent = self )  )
+        except :
+            print "EROOR ERROOOR "
+        #QtGui.QApplication.processEvents()
 
     ## @decorateur_try_except
     def updateProgressBar(self, value) :
@@ -2084,7 +2094,7 @@ class Example(QtGui.QWidget):
 
 
 
-        QtGui.QApplication.processEvents()
+        #QtGui.QApplication.processEvents()
         if len(sg_noteContentList) == 1 :
             my_noteLayoutWidget = noteLayoutWidget( sg_noteContentList, [ None , self.taskFilterWidget, None, None, None ] )
             self.clearRightLayout()
@@ -2100,7 +2110,7 @@ class Example(QtGui.QWidget):
             self.rightLayout.addWidget(  my_noteLayoutWidget  ) 
             my_noteLayoutWidget.SIGNAL_createMultiReply.connect( self.multiReplyNoteSlot)
 
-        QtGui.QApplication.processEvents()
+        #QtGui.QApplication.processEvents()
              
     ######
     ## @decorateur_try_except

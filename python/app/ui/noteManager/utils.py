@@ -129,19 +129,23 @@ def getUserTempPath():
 
 
 def getPathToImagePlugins():
-    return "Z:/sharedPython2.6/site-packages_win64/PyQt4/plugins"
+    if sys.platform == "darwin":
+        #return "/mnt/shared/sharedPython2.6/site-packages_win64/PyQt4/plugins"
+        return "/Applications/Shotgun.app/Contents/Frameworks/Qt/plugins"
+    else :
+        #return "//VSERVER01/shotgun/Python27_x64/Lib/site-packages/PyQt4/plugins"
+        return "Z:/sharedPython2.6/site-packages_win64/PyQt4/plugins"
 
 def getPathToShotgunApi():
     #return "D:\DATA\NOZON_shotgun\python-api-master"
     path = ""
     if sys.platform == "darwin":
-        path = "/mnt/shared/Dev/cyril/python/PACKAGES"
+        path = "/mnt/shared/sharedPython/modules/"
 
     elif sys.platform == "linux2":
-        path = "Z:/Dev/cyril/python/PACKAGES"
-
+        path = "Z:\sharedPython\modules"
     elif sys.platform == "win32":
-        path = "Z:/Dev/cyril/python/PACKAGES"
+        path = "Z:\sharedPython\modules"
 
     if os.path.exists(path) :
         return path
@@ -159,7 +163,7 @@ def OS_convertPath(path):
         return path
 
     elif sys.platform == "win32":
-        return path.replace( "//server01/shared2/"  , "S:\\")
+        return path.replace( "//server01/shared2/"  , "S:\\").replace("//sledge/vol1/", "Y:\\")
 
 
 

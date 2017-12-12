@@ -67,7 +67,7 @@ def take_a_screenShot() :
         screenshot_thread.start()
         while not screenshot_thread.isFinished():
             screenshot_thread.wait(100)
-            QtGui.QApplication.processEvents()
+            #QtGui.QApplication.processEvents()
 
         er = screenshot_thread.get_error()
         if er:
